@@ -386,7 +386,8 @@ a{{color:#6ab0ff}}
         f.write(html_doc)
     json.dump({"ts": d["ts"], "fx": fx, "servers": ok}, open(os.path.join(DATA_DIR, "page-data.json"), "w"),
               ensure_ascii=False)
-    print(f"[build] public/index.html（{len(html_doc):,} bytes）、{len(ok)} 台", flush=True)
+    print(f"[build] {os.path.relpath(os.path.join(PUBLIC_DIR, 'index.html'), PAGE_DIR)}"
+          f"（{len(html_doc):,} bytes）、{len(ok)} 台", flush=True)
 
 
 def main():
