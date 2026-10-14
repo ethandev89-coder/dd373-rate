@@ -9,10 +9,10 @@ mkdir -p logs
 {
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') ====="
   python3 build-page.py
-  if [ -z "$(git status --porcelain public/index.html data/page-data.json)" ]; then
+  if [ -z "$(git status --porcelain docs/index.html data/page-data.json)" ]; then
     echo "[publish] 頁面無變化，略過 push"
   else
-    git add public/index.html data/page-data.json
+    git add docs/index.html data/page-data.json
     git commit -q -m "update $(date '+%Y-%m-%d %H:%M') 幣價" || true
     git push -q origin main
     echo "[publish] pushed"

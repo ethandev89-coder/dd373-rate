@@ -23,7 +23,7 @@ import datetime as dt
 HOME = os.path.expanduser("~")
 PAGE_DIR = os.path.join(HOME, ".hermes", "dd373-page")
 DATA_DIR = os.path.join(PAGE_DIR, "data")
-PUBLIC_DIR = os.path.join(PAGE_DIR, "public")
+PUBLIC_DIR = os.path.join(PAGE_DIR, "docs")
 HISTORY = os.path.join(HOME, ".hermes", "data", "dd373-multiserver-history.json")
 SWEEP_LATEST = os.path.join(DATA_DIR, "sweep-latest.json")
 SWEEP_HISTORY = os.path.join(DATA_DIR, "sweep-history.json")
