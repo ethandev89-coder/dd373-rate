@@ -27,6 +27,10 @@
   --on-accent: #FFFFFF;          /* 主色底上的文字（徽章、膠囊） */
   --seg-sel: #FFFFFF;            /* 分段控制「選中」的小方塊 */
   --warn-soft: rgba(255, 149, 0, .12);
+  --up: #D70015;                 /* 漲跌（台股慣例）：數字變大＝紅 ▲ */
+  --down: #248A3D;               /* 數字變小＝綠 ▼ */
+  --up-soft: rgba(215, 0, 21, .12);
+  --down-soft: rgba(36, 138, 61, .12);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -45,6 +49,10 @@
     --bad: #FF453A;
     --seg-sel: #636366;
     --warn-soft: rgba(255, 159, 10, .16);
+    --up: #FF453A;
+    --down: #30D158;
+    --up-soft: rgba(255, 69, 58, .12);
+    --down-soft: rgba(48, 209, 88, .12);
   }
 }
 
@@ -124,8 +132,10 @@ h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
 td.pri, th.pri { color: var(--accent); }
 td.pri { background: var(--fill); }
 
-/* 漲跌不用紅綠（台灣紅＝漲，容易看反）：只用次要文字色＋▲▼ 與文字說明 */
-.up, .down { color: var(--label-2); }
+/* 漲跌：台股慣例——數字變大（1 台幣換到更多天幣）＝紅 ▲、數字變小＝綠 ▼；
+   四捨五入為 0.0% 時用灰色、不加箭頭。只用在漲跌小字與膠囊，大數字不上色。 */
+.up { color: var(--up); }
+.down { color: var(--down); }
 .flat { color: var(--label-3); }
 
 /* ---------- 全服排行（C 階段改成群組列表；此處先套色票） ---------- */
@@ -258,6 +268,10 @@ footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 
   border-radius: 8px; padding: 4px 8px; font-size: 15px;
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+/* 膠囊：漲跌用同色約 12% 底；0.0% 用灰底灰字、不加箭頭 */
+.chg-pill.up { background: var(--up-soft); color: var(--up); }
+.chg-pill.down { background: var(--down-soft); color: var(--down); }
+.chg-pill.flat { background: var(--fill); color: var(--label-2); }
 .chg-when { font-size: 13px; color: var(--label-2); }
 .hero-list { margin: 16px 0 0; }
 .hero-row {
@@ -298,8 +312,7 @@ footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 
 }
 .rrow.me .rline1 .nm { color: var(--accent); font-weight: 600; }
 .rline1 .vw { font-weight: 600; font-size: 16px; }
-.rline1 .dl { font-size: 13px; color: var(--label-3); min-width: 56px; text-align: right; }
-.rline1 .dl.hi { color: var(--label); font-weight: 600; }   /* |Δ| >= 2% 才強調（不用紅綠） */
+.rline1 .dl { font-size: 13px; min-width: 56px; text-align: right; }   /* 顏色由 .up／.down／.flat 決定 */
 .rline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
 
 /* ---------- details（全服排行） ---------- */

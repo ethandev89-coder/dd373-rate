@@ -144,6 +144,19 @@ eq('niceScale(1400,1700)', [s3.step, s3.ticks], [100, [1300, 1400, 1500, 1600, 1
 eq('niceStep 級距 ∈ 1/2/2.5/5×10^n', [0.2, 1.1, 3.3, 24.2, 82.5].map(T.niceStep), [0.2, 2, 5, 25, 100]);
 eq('niceStep(2.4) → 2.5', T.niceStep(2.4), 2.5);
 
+log.push('== 漲跌（台股慣例：變大＝紅 ▲、變小＝綠 ▼、0.0% 灰不加箭頭、一律不寫正負號） ==');
+var cases = [[2.54, 'up', '▲ 2.5%'], [-0.24, 'down', '▼ 0.2%'], [-2.0, 'down', '▼ 2.0%'],
+             [0.04, 'flat', '0.0%'], [-0.04, 'flat', '0.0%'], [0, 'flat', '0.0%']];
+cases.forEach(function (c) {
+  var r = T.dirPct(c[0]);
+  eq('dirPct(' + c[0] + ') → ' + c[1] + ' ' + c[2], [r.cls, r.txt], [c[1], c[2]]);
+  ok('dirPct(' + c[0] + ') 不含正負號', !/[+−-]/.test(r.txt), r.txt);
+});
+eq('dirOf(8.4,0) 差值用整數', (function (d) { return [d.cls, d.arrow, d.a]; })(T.dirOf(8.4, 0)), ['up', '▲', 8]);
+eq('dirOf(-7.6,0)', (function (d) { return [d.cls, d.arrow, d.a]; })(T.dirOf(-7.6, 0)), ['down', '▼', 8]);
+eq('dirOf(-0.4,0) 進位後為 0 → 灰、無箭頭', (function (d) { return [d.cls, d.arrow, d.a]; })(T.dirOf(-0.4, 0)), ['flat', '', 0]);
+eq('dirOf(NaN 之外不炸)', (function (d) { return [d.cls, d.a]; })(T.dirOf(0, 1)), ['flat', 0]);
+
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';
 

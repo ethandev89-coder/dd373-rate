@@ -36,6 +36,19 @@
   function fmtFull(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
   function isMidnight(t) { var p = tp(t); return p.h === 0 && p.m === 0; }
   function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
+  /* 漲跌方向（台股慣例）：數字變大＝紅 ▲、數字變小＝綠 ▼；
+     四捨五入（digits 位）後為 0 就不加箭頭、用灰色。回傳 { cls, arrow, a }，a 已四捨五入。 */
+  function dirOf(v, digits) {
+    var f = Math.pow(10, digits === undefined ? 1 : digits);
+    var a = Math.round(Math.abs(v) * f) / f;
+    if (a === 0 || v === 0) return { cls: 'flat', arrow: '', a: 0 };
+    var up = v > 0;
+    return { cls: up ? 'up' : 'down', arrow: up ? '▲' : '▼', a: a };
+  }
+  function dirPct(v) {                      // 百分比字串（不含正負號）
+    var d = dirOf(v);
+    return { cls: d.cls, txt: d.cls === 'flat' ? '0.0%' : d.arrow + ' ' + d.a.toFixed(1) + '%' };
+  }
 
   /* ---------- X 刻度 ---------- */
   // 台北「週一 00:00」的日序（day 0 = 1970-01-01 台北 = 週四 → 週一 ≡ 4 (mod 7)）
@@ -361,11 +374,10 @@
     var vals = pts.map(function (p) { return p.v; });
     var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
     var chg = (last.v / first.v - 1) * 100;
-    // 寫法與 Hero 漲跌膠囊一致：正值「+0.9%」、負值用真正的減號「−0.9%」、持平「0.0%」，不加 ▲▼
-    var chgtxt = Math.abs(chg) < 0.05 ? '0.0%'
-               : (chg > 0 ? '+' + chg.toFixed(1) : '−' + Math.abs(chg).toFixed(1)) + '%';
+    // 台股慣例：數字變大＝紅 ▲、變小＝綠 ▼、0.0% 灰不加箭頭（與 Hero 膠囊同一套寫法）
+    var d = dirPct(chg);
     var hasEst = pts.some(function (p) { return p.src === 'est'; });
-    el.innerHTML = '本時窗 ' + chgtxt +
+    el.innerHTML = '本時窗 <span class="' + d.cls + '">' + d.txt + '</span>' +
                    '　高 <b>' + num(hi) + '</b>　低 <b>' + num(lo) + '</b>' +
                    (hasEst ? '　<span class="tag">含估算</span>' : '');
   }
@@ -443,11 +455,12 @@
     var difftxt;
     if (diff === null) {
       difftxt = '';
-    } else if (Math.abs(diff) < 0.5) {
-      difftxt = '較前一筆 ±0（' + (pct === null ? '0.0' : pct.toFixed(1)) + '%）';
     } else {
-      difftxt = '較前一筆 ' + (diff > 0 ? '▲ +' : '▼ −') + num(Math.abs(diff)) +
-                (pct === null ? '' : '（' + (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%）');
+      // 台股慣例：▲ 紅／▼ 綠、四捨五入為 0 就不加箭頭；只上色，不寫正負號
+      var dd = dirOf(diff, 0), dp = (pct === null || prevV === null) ? null : dirPct(pct);
+      var dtxt = dd.cls === 'flat' ? '0' : dd.arrow + ' ' + num(dd.a);
+      difftxt = '較前一筆 <span class="' + dd.cls + '">' + dtxt + '</span>' +
+                (dp ? '（<span class="' + dp.cls + '">' + dp.txt + '</span>）' : '');
     }
     tt.innerHTML =
       '<div class="t1">' + fmtFull(p.t) + '</div>' +
@@ -536,7 +549,8 @@
                         ticksFor: ticksFor, chooseStep: chooseStep, labelPlan: labelPlan,
                         maxLabelPx: maxLabelPx, tickGapPx: tickGapPx, mondayAnchorDay: mondayAnchorDay,
                         niceScale: niceScale, niceStep: niceStep, tickLabel: tickLabel,
-                        fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS };
+                        fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS,
+                        dirOf: dirOf, dirPct: dirPct };
 
   var WINCFG = window.DD373WINDOWS || [];
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

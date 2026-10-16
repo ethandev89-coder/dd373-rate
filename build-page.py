@@ -353,7 +353,7 @@ def build(d, prev):
     thin = sorted(ok, key=lambda s: s["stock_wj"])[:3]
     deep = sorted(ok, key=lambda s: -s["stock_wj"])[:3]
 
-    # ---------- 漲跌／差值（一律文字＋▲▼–，不用 emoji） ----------
+    # ---------- 漲跌（台股慣例：數字變大＝紅 ▲、數字變小＝綠 ▼；0.0% 灰、不加箭頭，不用正負號） ----------
     def delta_pct(cur, old):
         """回傳百分比（float）或 None"""
         if not cur or not old:
@@ -361,24 +361,13 @@ def build(d, prev):
         return (cur / old - 1) * 100
 
     def arrow_of(pct):
-        """(css class, 文字) —— 幣值上升＝1 台幣買到更多金＝天幣變便宜"""
+        """(css class, 文字) —— 幣值上升＝1 台幣買到更多天幣＝天幣變便宜（紅 ▲）"""
         if pct is None:
             return "flat", "—"
-        if pct > 0.05:
-            return "up", f"▲ +{pct:.1f}%"
-        if pct < -0.05:
-            return "down", f"▼ −{abs(pct):.1f}%"
-        return "flat", "– 0.0%"
-
-    def gold_dir(pct):
-        """方向用文字講（不用紅綠）：天幣變便宜／天幣變貴／持平"""
-        if pct is None:
-            return "—"
-        if pct > 0.05:
-            return "天幣變便宜"
-        if pct < -0.05:
-            return "天幣變貴"
-        return "持平"
+        a = round(abs(pct), 1)          # 用四捨五入後的字面值判斷方向：0.0% 就不加箭頭
+        if a == 0:
+            return "flat", "0.0%"
+        return ("up", f"▲ {a:.1f}%") if pct > 0 else ("down", f"▼ {a:.1f}%")
 
     prev_by_name = {x["server"]: x for x in (prev["servers"] if prev else [])}
 
@@ -391,15 +380,14 @@ def build(d, prev):
     for srv in order:
         o = prev_by_name.get(srv["server"])
         pct = delta_pct(srv["vw2_gold_per_twd"], o["vw2_gold_per_twd"] if o else None)
-        _cls, dl_txt = arrow_of(pct)
-        hi = " hi" if (pct is not None and abs(pct) >= 2) else ""      # 只有 |Δ|≥2% 才強調
+        srv_cls, dl_txt = arrow_of(pct)
         is_me = (srv is me)
         rank_rows.append(
             f'<div class="rrow{" me" if is_me else ""}">'
             f'<div class="rline1"><span class="rk">{rank_of[srv["server"]]}</span>'
             f'<span class="nm">{html.escape(srv["server"])}</span>'
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
-            f'<span class="dl{hi}">{dl_txt}</span></div>'
+            f'<span class="dl {srv_cls}">{dl_txt}</span></div>'
             f'<div class="rline2">最低一筆 {srv["low_gold_per_twd"]:,.0f}'
             f' ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
             f'</div></div>')
@@ -532,25 +520,19 @@ def build(d, prev):
         prev_pt = next((p for p in reversed(all_vw2) if p[0] <= cut), None)
         if prev_pt and prev_pt[1]:
             chg24 = (now_vw2 / prev_pt[1] - 1) * 100
-    chg_line = (f"{gold_dir(chg24)} {abs(chg24):.1f}%（24 小時）" if chg24 is not None else "24 小時變化：資料不足")
     thin_tag = ('<span class="tag" data-tip="掛單總量不到 2 億天幣，單一賣家就能推動數字，看趨勢不要看單點">薄市場</span>'
                 if (me and me["stock_wj"] < 20000) else "")
     hero_block = ""
     ranking_block = ""
     if me:
         rank = rank_of[me["server"]]
-        # 漲跌：股票式小膠囊（中性色，不用紅綠）；負數用 U+2212
-        if chg24 is None:
-            chg_val = "—"
-        elif abs(chg24) < 0.05:
-            chg_val = "0.0%"
-        else:
-            chg_val = f"+{chg24:.1f}%" if chg24 > 0 else f"−{abs(chg24):.1f}%"
+        # 漲跌：台股慣例（數字變大＝紅 ▲、變小＝綠 ▼；0.0% 灰、不加箭頭；一律不寫正負號）
+        chg_cls, chg_val = arrow_of(chg24)
         hero_block = f"""
 <section class="card lg hero">
   <div class="hero-main">
     <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>天幣/元</span></div>
-    <div class="hero-chg"><span class="chg-pill">{chg_val}</span><span class="chg-when">24 小時</span></div>
+    <div class="hero-chg"><span class="chg-pill {chg_cls}">{chg_val}</span><span class="chg-when">24 小時</span></div>
   </div>
   <div class="hero-list">
     <div class="hero-row"><span class="hl" data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</span><span class="hv">{me['low_gold_per_twd']:,.0f}</span></div>
