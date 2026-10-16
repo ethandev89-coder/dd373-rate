@@ -104,14 +104,8 @@ def set_backoff(hours, reason):
 
 
 def fetch_sweep(force=False):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    if not force and os.path.exists(SWEEP_LATEST):
-        age = time.time() - os.path.getmtime(SWEEP_LATEST)
-        if age < CACHE_MIN * 60:
-            d = json.load(open(SWEEP_LATEST, encoding="utf-8"))
-            d["cached"] = True
-            print(f"[cache] 沿用 {int(age/60)} 分鐘前的掃描結果（{len(d['servers'])} 台）", flush=True)
-            return d
+    """預覽產線不得掃描／不得寫入 data/：資料一律沿用正式版產線的結果。"""
+    raise RuntimeError("build-page-next.py 對 data/ 唯讀：請用 --light（沿用正式版掃描結果）")
 
     bo = backoff_active()
     if bo and not force:
@@ -202,6 +196,8 @@ def load_series(server=USER_SERVER, days=30):
 
 
 def append_vw2_series(ts_iso, value):
+    raise RuntimeError("build-page-next.py 對 data/ 唯讀：② 長期序列由 build-page.py 寫入")
+
     """② 長期序列（只存飛馬一個數字一筆）——獨立檔案，不受 sweep-history / fm-light 的 400 筆上限影響，
     7 天／30 天窗才不會因為裁切而缺歷史。"""
     if not value:
@@ -482,7 +478,7 @@ def build(d, prev):
         out = []
         for nm, e, l, p in items:
             out.append(f"<li><b>{html.escape(nm)}</b> {p:+.1f}%"
-                       f"<span class='muted'>（1 台幣 {e:,.0f} → {l:,.0f} 金/元）</span></li>")
+                       f"<span class='muted'>（{e:,.0f} → {l:,.0f} 金/元）</span></li>")
         return f"<ul class='movers {sign}'>{''.join(out)}</ul>"
 
     s_now = load_vw2_series(24, "vw2_gold_per_twd")     # ② 買滿 5,000 萬金加權（15 分輕掃 + 每小時全服）
@@ -600,7 +596,7 @@ def build(d, prev):
         hero_block = f"""
 <section class="card lg hero">
   <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>金/元</span></div>
-  <p class="hero-l">1 台幣買 {me['vw2_gold_per_twd']:,.0f} 金/元 · {chg_line}</p>
+  <p class="hero-l">1 台幣買 {me['vw2_gold_per_twd']:,.0f} 金 · {chg_line}</p>
   <div class="hero-3">
     <div><label>最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
     <div><label>變現</label><b>{me['sell_gold_per_twd'] or '—'}</b></div>
@@ -630,7 +626,7 @@ def build(d, prev):
     <summary><span>口徑說明</span><span class="dsub">方法論</span></summary>
     <div class="dbody method">
       <p class="mt">同一把尺：② 買滿 5,000 萬金加權</p>
-      <p><b>② 買滿 5,000 萬金加權（本頁主數字）</b>＝從最便宜的掛單往上吃、累積到 5,000 萬金為止的加權平均單價，換算成「1 台幣可買多少金/元」（<b>數字越大＝天幣越便宜</b>）。</p>
+      <p><b>② 買滿 5,000 萬金加權（本頁主數字）</b>＝從最便宜的掛單往上吃、累積到 5,000 萬金為止的加權平均單價，換算成金／元（<b>數字越大＝天幣越便宜</b>）。</p>
       <p><b>① 最低一筆</b>＝全檔位最便宜的單筆單價（小額真的買得到的價，單位同為金/元）。</p>
       <p><b>變現</b>＝DD373 收購區掛單（數字越小＝賣金換到越多台幣）。</p>
       <p class="mt">掛單深度：筆數定義</p>
@@ -730,8 +726,9 @@ def main():
     ap.add_argument("--light", action="store_true",
                     help="每 15 分鐘的輕量發佈：不重掃全服，只把最新輕掃的飛馬數字套進頁面")
     a = ap.parse_args()
-    if a.light:
-        a.no_fetch = True
+    a.no_fetch = True          # 預覽產線對 data/ 唯讀：永遠不掃描、不寫資料檔
+    if not a.light:
+        print("[preview] 提醒：本產線不掃描，資料沿用正式版（如需最新輕掃數字請加 --light）", flush=True)
     d = fetch_sweep(force=False) if not a.no_fetch else (
         json.load(open(SWEEP_LATEST, encoding="utf-8")) if os.path.exists(SWEEP_LATEST) else
         {"fx": fetch_fx(), "ts": dt.datetime.now().isoformat(timespec="seconds"), "servers": [], "errs": []})

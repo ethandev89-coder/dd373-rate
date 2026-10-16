@@ -95,13 +95,22 @@ def set_backoff(hours, reason):
 
 def fetch_sweep(force=False):
     os.makedirs(DATA_DIR, exist_ok=True)
+    # 快取新鮮度一律看資料檔「內部的 ts」，不看檔案 mtime
+    # （mtime 會被預覽產線／git stash 之類的操作改到：曾讓正式版誤判「1 分鐘前」而整整一小時沒重掃）
     if not force and os.path.exists(SWEEP_LATEST):
-        age = time.time() - os.path.getmtime(SWEEP_LATEST)
-        if age < CACHE_MIN * 60:
+        try:
             d = json.load(open(SWEEP_LATEST, encoding="utf-8"))
-            d["cached"] = True
-            print(f"[cache] 沿用 {int(age/60)} 分鐘前的掃描結果（{len(d['servers'])} 台）", flush=True)
-            return d
+            age_min = (dt.datetime.now() - dt.datetime.fromisoformat(d["ts"])).total_seconds() / 60
+        except Exception as e:
+            d, age_min = None, None
+            print(f"[cache] {os.path.basename(SWEEP_LATEST)} 讀不到內部 ts（{type(e).__name__}）→ 直接重掃", flush=True)
+        if d is not None:
+            if -5 <= age_min < CACHE_MIN:
+                d["cached"] = True
+                print(f"[cache] 沿用 {int(max(age_min, 0))} 分鐘前的掃描結果"
+                      f"（{len(d['servers'])} 台，資料 ts {d['ts']}）", flush=True)
+                return d
+            print(f"[sweep] 快取資料已 {int(age_min)} 分鐘（門檻 {CACHE_MIN}）→ 重掃", flush=True)
 
     bo = backoff_active()
     if bo and not force:

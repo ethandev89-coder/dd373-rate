@@ -48,10 +48,11 @@ trap 'rm -rf "$LOCK"' EXIT
   else
     git add docs/preview.html docs/version.json
     git commit -q -m "preview $(date '+%Y-%m-%d %H:%M') 改版預覽" || true
-    git pull --rebase --autostash -q origin main || true
+    # 不做 pull／rebase：這個 repo 只有本機在 push；而 `pull --rebase --autostash` 會把工作目錄裡
+    # 未 commit 的資料檔 stash 再放回 → 改到 mtime（曾讓正式版快取誤判「1 分鐘前」而少掃一小時）。
+    # push 被拒就保留本地 commit、記 log，下次再推。
     if ! git push -q origin main; then
-      git pull --rebase --autostash -q origin main || true
-      git push -q origin main || echo "[preview] push 失敗（遠端可能已更新），下次再試"
+      echo "[preview] push 失敗（遠端已更新？）→ 保留本地 commit，下次再推"
     fi
     echo "[preview] pushed"
   fi
