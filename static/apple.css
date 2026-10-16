@@ -136,7 +136,7 @@ td.pri { background: var(--fill); }
    四捨五入為 0.0% 時用灰色、不加箭頭。只用在漲跌小字與膠囊，大數字不上色。 */
 .up { color: var(--up); }
 .down { color: var(--down); }
-.flat { color: var(--label-3); }
+.flat { color: var(--label-2); }
 
 /* ---------- 全服排行（C 階段改成群組列表；此處先套色票） ---------- */
 table { width: 100%; border-collapse: collapse; }

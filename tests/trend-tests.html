@@ -156,6 +156,9 @@ eq('dirOf(8.4,0) 差值用整數', (function (d) { return [d.cls, d.arrow, d.a];
 eq('dirOf(-7.6,0)', (function (d) { return [d.cls, d.arrow, d.a]; })(T.dirOf(-7.6, 0)), ['down', '▼', 8]);
 eq('dirOf(-0.4,0) 進位後為 0 → 灰、無箭頭', (function (d) { return [d.cls, d.arrow, d.a]; })(T.dirOf(-0.4, 0)), ['flat', '', 0]);
 eq('dirOf(NaN 之外不炸)', (function (d) { return [d.cls, d.a]; })(T.dirOf(0, 1)), ['flat', 0]);
+eq('dirPct(-0.24,false) 括號內不重複箭頭', [T.dirPct(-0.24, false).cls, T.dirPct(-0.24, false).txt], ['down', '0.2%']);
+eq('dirPct(2.54,false)', [T.dirPct(2.54, false).cls, T.dirPct(2.54, false).txt], ['up', '2.5%']);
+eq('dirPct(0.04,false) 持平仍為 0.0%', T.dirPct(0.04, false).txt, '0.0%');
 
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';

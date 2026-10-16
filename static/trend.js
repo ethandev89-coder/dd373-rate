@@ -45,9 +45,10 @@
     var up = v > 0;
     return { cls: up ? 'up' : 'down', arrow: up ? '▲' : '▼', a: a };
   }
-  function dirPct(v) {                      // 百分比字串（不含正負號）
+  function dirPct(v, arrow) {                // 百分比字串（不含正負號）；arrow=false → 不加箭頭（tooltip 括號內）
     var d = dirOf(v);
-    return { cls: d.cls, txt: d.cls === 'flat' ? '0.0%' : d.arrow + ' ' + d.a.toFixed(1) + '%' };
+    var useArrow = arrow !== false && d.cls !== 'flat';
+    return { cls: d.cls, txt: useArrow ? d.arrow + ' ' + d.a.toFixed(1) + '%' : d.a.toFixed(1) + '%' };
   }
 
   /* ---------- X 刻度 ---------- */
@@ -456,8 +457,8 @@
     if (diff === null) {
       difftxt = '';
     } else {
-      // 台股慣例：▲ 紅／▼ 綠、四捨五入為 0 就不加箭頭；只上色，不寫正負號
-      var dd = dirOf(diff, 0), dp = (pct === null || prevV === null) ? null : dirPct(pct);
+      // 台股慣例：▲ 紅／▼ 綠、四捨五入為 0 就不加箭頭；只上色不寫正負號；括號內的百分比不重複箭頭
+      var dd = dirOf(diff, 0), dp = (pct === null || prevV === null) ? null : dirPct(pct, false);
       var dtxt = dd.cls === 'flat' ? '0' : dd.arrow + ' ' + num(dd.a);
       difftxt = '較前一筆 <span class="' + dd.cls + '">' + dtxt + '</span>' +
                 (dp ? '（<span class="' + dp.cls + '">' + dp.txt + '</span>）' : '');
