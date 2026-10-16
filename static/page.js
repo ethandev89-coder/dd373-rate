@@ -168,6 +168,42 @@
     if (!isNaN(y) && y > 0) setTimeout(function () { window.scrollTo(0, y); }, 0);
   }
 
+  /* ---------- 圖例說明泡泡（滑鼠 hover／手機點一下） ---------- */
+  function bindTips() {
+    var tip = null, cur = null, shownAt = 0;
+    function hide() {
+      if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
+      tip = null; cur = null;
+    }
+    function show(el) {
+      if (cur === el) return;
+      hide();
+      cur = el;
+      tip = document.createElement('div');
+      tip.className = 'lgtip';
+      tip.textContent = el.getAttribute('data-tip');
+      document.body.appendChild(tip);
+      var r = el.getBoundingClientRect(), w = tip.offsetWidth;
+      tip.style.left = Math.max(8, Math.min(r.left, document.documentElement.clientWidth - w - 8)) + 'px';
+      tip.style.top = (r.bottom + (window.scrollY || 0) + 8) + 'px';
+      shownAt = Date.now();
+    }
+    function target(e) {
+      return (e.target && e.target.closest) ? e.target.closest('[data-tip]') : null;
+    }
+    document.addEventListener('mouseover', function (e) {          // 滑鼠：移上去顯示、移開收起
+      var el = target(e);
+      if (el) show(el); else hide();
+    }, true);
+    document.addEventListener('click', function (e) {              // 手機：點一下開／關
+      var el = target(e);
+      if (!el) { hide(); return; }
+      // 手機 tap 會先來一個合成 mouseover（已顯示）→ 350ms 內不再 toggle，避免一閃就消失
+      if (cur === el && Date.now() - shownAt > 350) hide(); else show(el);
+    });
+    window.addEventListener('scroll', hide, { passive: true });
+  }
+
   /* ---------- 啟動 ---------- */
   function boot() {
     restoreTab();
@@ -175,6 +211,7 @@
     bindDetails();
     bindScroll();
     updateTimes();
+    bindTips();
     if (window.DD373TREND && window.DD373TREND.renderAll) window.DD373TREND.renderAll();   // 還原頁籤後用正確寬度重繪
     restoreScroll();
     setInterval(updateTimes, 60 * 1000);                            // 相對時間每 60 秒重算
@@ -186,7 +223,7 @@
     });
   }
 
-  window.DD373PAGE = { restoreTab: restoreTab, shouldReload: shouldReload, checkVersion: checkVersion, updateTimes: updateTimes,
+  window.DD373PAGE = { restoreTab: restoreTab, bindTips: bindTips, shouldReload: shouldReload, checkVersion: checkVersion, updateTimes: updateTimes,
                        relText: relText, durText: durText, freshState: freshState, ageMin: ageMin, nowMs: nowMs,
                        pollMs: pollMs, builtMs: function () { return MY_BUILT; },
                        setBuilt: function (v) { MY_BUILT = v; },

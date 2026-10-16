@@ -433,7 +433,7 @@ def build(d, prev):
             f'<span class="nm">{html.escape(srv["server"])}</span>'
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
             f'<span class="dl{hi}">{dl_txt}</span></div>'
-            f'<div class="rline2">① {srv["low_gold_per_twd"]:,.0f} ・ 變現 {srv["sell_gold_per_twd"] or "—"}'
+            f'<div class="rline2">① {srv["low_gold_per_twd"]:,.0f} ・ 變現 {format(srv["sell_gold_per_twd"], ",") if srv.get("sell_gold_per_twd") else "—"}'
             f' ・ 吃 {srv["used"]} 筆 ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
             f' ・ 買 5,000 萬天幣 ≈ NT${nt5000(srv):,}</div></div>')
 
@@ -540,6 +540,7 @@ def build(d, prev):
     <div class="lgd">
       <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-real" d="M1,4 H19"/></svg>實測</span>
       <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
+      <span class="li" data-tip="單次掃描偏離前後中位數太多，主線用中位數，圈圈標原始值"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle class="lg-out" cx="6" cy="6" r="3.6"/></svg>離群點</span>
     </div>
     <div class="panels">
       {panel("24h", "p24", n24)}
@@ -595,8 +596,8 @@ def build(d, prev):
   <p class="hero-l">1 台幣買 {me['vw2_gold_per_twd']:,.0f} 天幣 · {chg_line}</p>
   <div class="hero-3">
     <div><label>最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
-    <div><label>變現</label><b>{me['sell_gold_per_twd'] or '—'}</b></div>
-    <div><label>掛單</label><b>{me['stock_wj'] / 10000:.2f} 億天幣</b> {thin_tag}</div>
+    <div><label>變現</label><b>{format(me["sell_gold_per_twd"], ",") if me.get("sell_gold_per_twd") else "—"}</b></div>
+    <div><label>掛單（天幣）</label><b>{me['stock_wj'] / 10000:.2f} 億</b> {thin_tag}</div>
   </div>
 </section>"""
         glist_block = f"""

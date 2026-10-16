@@ -22,6 +22,11 @@
       <label for="tr7">7 天</label><label for="tr30">30 天</label></div>
     <div class="panels"><div class="panel p24"><div class="chart" data-win="24h"></div></div></div>
   </div>
+  <div class="lgd">
+    <span class="li"><svg width="20" height="8" viewBox="0 0 20 8"><path class="lg-real" d="M1,4 H19"/></svg>實測</span>
+    <span class="li"><svg width="20" height="8" viewBox="0 0 20 8"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
+    <span class="li" data-tip="單次掃描偏離前後中位數太多，主線用中位數，圈圈標原始值"><svg width="12" height="12" viewBox="0 0 12 12"><circle class="lg-out" cx="6" cy="6" r="3.6"/></svg>離群點</span>
+  </div>
   <details class="dsc"><summary>全服排行<span class="dsub">飛馬第 22／22 名</span></summary><div>…</div></details>
   <details class="dsc"><summary>口徑說明<span class="dsub">方法論</span></summary><div>…</div></details>
 </div>
@@ -103,6 +108,20 @@ window.addEventListener('load', function () {
     try { localStorage.setItem('dd373.tab', '亂七八糟'); } catch (e) {}
     P.restoreTab();
     eq('localStorage 壞值 → fallback 24 小時', document.getElementById('tr24').checked, true);
+  }
+  log.push('');
+  log.push('== 圖例說明泡泡（bindTips 綁在 boot，所以要等 load）==');
+  var lg = document.querySelector('.lgd [data-tip]');
+  ok('圖例有離群點項目與說明文字', !!lg && lg.getAttribute('data-tip').indexOf('偏離前後中位數') >= 0, lg && lg.innerText.trim());
+  if (lg) {
+    lg.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+    var tipEl = document.querySelector('.lgtip');
+    ok('滑鼠移上去 → 出現泡泡且文字正確', !!tipEl && tipEl.textContent.indexOf('偏離前後中位數') >= 0,
+       tipEl ? tipEl.textContent : null);
+    lg.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    eq('350ms 內再點（手機合成事件）→ 泡泡還在', !!document.querySelector('.lgtip'), true);
+    document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    eq('點空白處 → 泡泡收起', !document.querySelector('.lgtip'), true);
   }
   log.push('');
   log.push('<b>' + (fail === 0 ? '✅ 全部通過' : '❌ 有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>');

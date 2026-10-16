@@ -305,3 +305,17 @@ details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
 .method p { margin: 0 0 8px; font-size: 13px; color: var(--label-2); }
 .method p b { color: var(--label); }
 .method .mt { font-size: 15px; font-weight: 600; color: var(--label); margin: 16px 0 8px; }
+
+/* ---------- 手機不換行（Hero 三格、群組列表標籤） ---------- */
+.hero-3 label, .hero-3 b { white-space: nowrap; }
+.grow > span:first-child { white-space: nowrap; }
+
+/* ---------- 圖例：離群點與說明泡泡 ---------- */
+.lgd .li[data-tip] { cursor: pointer; }
+.lgd .lg-out { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.lgtip {
+  position: absolute; z-index: 6; max-width: 260px;
+  background: var(--card-2); color: var(--label);
+  border: .5px solid var(--sep); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; line-height: 1.45;
+}
