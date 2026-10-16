@@ -552,7 +552,7 @@ def build(d, prev):
         ranking_block = f"""
 <section class="card">
   <details class="dsc">
-    <summary><span>全服排行</span><span class="dsub"><span class="tag gray" data-tip="平時天幣不能跨服，排名只在移民時有參考價值">移民參考</span> 飛馬第 {rank}／{n_servers} 名</span></summary>
+    <summary><span>全服排行</span><span class="dsub">飛馬第 {rank}／{n_servers} 名</span></summary>
     <div class="dbody glist">{''.join(rank_rows)}</div>
   </details>
 </section>"""
