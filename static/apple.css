@@ -249,7 +249,7 @@ footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 
 .hero-n b { font-size: 48px; font-weight: 600; letter-spacing: -.5px; line-height: 1.05; }
 .hero-n span { font-size: 17px; color: var(--label-2); }
 .hero-l { margin: 8px 0 16px; font-size: 15px; color: var(--label-2); }
-.hero-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hero-3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .hero-3 > div { background: var(--card-2); border-radius: 12px; padding: 12px; }
 .hero-3 label { display: block; font-size: 12px; color: var(--label-2); }
 .hero-3 b { font-size: 17px; font-weight: 600; }
@@ -282,7 +282,7 @@ footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 
 .rline1 .dl.hi { color: var(--label); font-weight: 600; }   /* |Δ| >= 2% 才強調（不用紅綠） */
 .rline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
 
-/* ---------- details（全服排行／口徑說明共用） ---------- */
+/* ---------- details（全服排行） ---------- */
 details.dsc > summary {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   min-height: 44px; font-size: 20px; font-weight: 600;
@@ -301,10 +301,6 @@ details.dsc > summary .dsub::after {
 details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
 .dbody { margin-top: 12px; }
 
-/* ---------- 口徑說明 ---------- */
-.method p { margin: 0 0 8px; font-size: 13px; color: var(--label-2); }
-.method p b { color: var(--label); }
-.method .mt { font-size: 15px; font-weight: 600; color: var(--label); margin: 16px 0 8px; }
 
 /* ---------- 手機不換行（Hero 三格、群組列表標籤） ---------- */
 .hero-3 label, .hero-3 b { white-space: nowrap; }
@@ -324,6 +320,6 @@ details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
 .hero-nt { margin: 4px 0 0; font-size: 15px; color: var(--label-2); }
 .hero-nt b { color: var(--label); font-weight: 600; }
 
-/* ---------- 灰色 tag（底價單） ---------- */
+/* ---------- 灰色 tag（移民參考）與說明泡泡 ---------- */
 .tag.gray { background: var(--fill); color: var(--label-2); }
-.lgd .li[data-tip] { cursor: pointer; }
+[data-tip] { cursor: pointer; }

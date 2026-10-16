@@ -198,6 +198,10 @@
     document.addEventListener('click', function (e) {              // 手機：點一下開／關
       var el = target(e);
       if (!el) { hide(); return; }
+      if (el.closest && el.closest('summary')) {                    // 泡泡在 <summary> 裡時，別讓 details 跟著開合
+        e.preventDefault();
+        e.stopPropagation();
+      }
       // 手機 tap 會先來一個合成 mouseover（已顯示）→ 350ms 內不再 toggle，避免一閃就消失
       if (cur === el && Date.now() - shownAt > 350) hide(); else show(el);
     });

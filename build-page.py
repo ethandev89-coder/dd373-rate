@@ -382,16 +382,6 @@ def build(d, prev):
             return "天幣變貴"
         return "持平"
 
-    BASE_TAG = '<span class="tag gray" data-tip="收購區只剩底價單，正常買家已撤">底價單</span>'
-
-    def is_base_price(srv, fx_):
-        """收購價（元/萬天幣）≤1.02 → 底價機器人單（正常買家 ≥1.2）"""
-        v = srv.get("sell_gold_per_twd")
-        return bool(v) and (10000.0 / (v * fx_)) <= 1.02
-
-    def base_tag_of(srv):
-        return " " + BASE_TAG if is_base_price(srv, fx) else ""
-
     prev_by_name = {x["server"]: x for x in (prev["servers"] if prev else [])}
 
     # ---------- 全服排行列（飛馬置頂、其餘依 ② 由大到小；第 2 行放細節） ----------
@@ -412,7 +402,7 @@ def build(d, prev):
             f'<span class="nm">{html.escape(srv["server"])}</span>'
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
             f'<span class="dl{hi}">{dl_txt}</span></div>'
-            f'<div class="rline2">① {srv["low_gold_per_twd"]:,.0f} ・ 變現 {format(srv["sell_gold_per_twd"], ",") if srv.get("sell_gold_per_twd") else "—"}{base_tag_of(srv)}'
+            f'<div class="rline2">① {srv["low_gold_per_twd"]:,.0f}'
             f' ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
             f' ・ 買 5,000 萬天幣 ≈ NT${nt5000(srv):,}</div></div>')
 
@@ -509,7 +499,7 @@ def build(d, prev):
     </div>
     <div class="lgd">
       <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-real" d="M1,4 H19"/></svg>實測</span>
-      <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
+      <span class="li" data-tip="10/14 19:01 以前沒有實測，用舊的實買序列 × {r_txt} 換算；看趨勢可以，單點數字別當真"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
       <span class="li" data-tip="單次掃描偏離前後中位數太多，主線用中位數，圈圈標原始值"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle class="lg-out" cx="6" cy="6" r="3.6"/></svg>離群點</span>
     </div>
     <div class="panels">
@@ -546,8 +536,8 @@ def build(d, prev):
         if prev_pt and prev_pt[1]:
             chg24 = (now_vw2 / prev_pt[1] - 1) * 100
     chg_line = (f"{gold_dir(chg24)} {abs(chg24):.1f}%（24 小時）" if chg24 is not None else "24 小時變化：資料不足")
-    thin_tag = '<span class="tag">薄市場</span>' if (me and me["stock_wj"] < 20000) else ""
-    base_tag = base_tag_of(me) if me else ""
+    thin_tag = ('<span class="tag" data-tip="掛單總量不到 2 億天幣，單一賣家就能推動數字，看趨勢不要看單點">薄市場</span>'
+                if (me and me["stock_wj"] < 20000) else "")
     hero_block = ""
     ranking_block = ""
     if me:
@@ -558,51 +548,18 @@ def build(d, prev):
   <p class="hero-nt">買 5,000 萬天幣 ≈ <b>NT${nt5000(me):,}</b></p>
   <p class="hero-l">1 台幣買 {me['vw2_gold_per_twd']:,.0f} 天幣 · {chg_line}</p>
   <div class="hero-3">
-    <div><label>最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
-    <div><label>變現</label><b>{format(me["sell_gold_per_twd"], ",") if me.get("sell_gold_per_twd") else "—"}</b>{base_tag}</div>
+    <div><label data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
     <div><label>掛單（天幣）</label><b>{me['stock_wj'] / 10000:.2f} 億</b> {thin_tag}</div>
   </div>
 </section>"""
         ranking_block = f"""
 <section class="card">
   <details class="dsc">
-    <summary><span>全服排行</span><span class="dsub">飛馬第 {rank}／{n_servers} 名</span></summary>
+    <summary><span>全服排行</span><span class="dsub"><span class="tag gray" data-tip="平時天幣不能跨服，排名只在移民時有參考價值">移民參考</span> 飛馬第 {rank}／{n_servers} 名</span></summary>
     <div class="dbody glist">{''.join(rank_rows)}</div>
   </details>
 </section>"""
 
-    # ---------- 口徑說明（全頁方法論只在這裡出現一次） ----------
-    method_block = f"""
-<section class="card">
-  <details class="dsc">
-    <summary><span>口徑說明</span><span class="dsub">方法論</span></summary>
-    <div class="dbody method">
-      <p class="mt">同一把尺：② 買滿 5,000 萬天幣加權</p>
-      <p><b>② 買滿 5,000 萬天幣加權（本頁主數字）</b>＝從最便宜的掛單一路往上買、累積到湊滿 5,000 萬天幣為止的加權平均單價，換算成天幣／元（<b>數字越大＝天幣越便宜</b>）。</p>
-      <p><b>① 最低一筆</b>＝全檔位最便宜的單筆單價（小額真的買得到的價，單位同為天幣/元）。</p>
-      <p><b>變現</b>＝DD373 收購區掛單（數字越小＝賣天幣換到越多台幣）。收購價 ≤1.02 元/萬天幣時會標「底價單」＝收購區只剩底價機器人（正常買家 ≥1.2 元/萬天幣；實測那批是 1.0~1.0013），數字仍然是真的、賣得進去。</p>
-      <p class="mt">掛單深度：筆數定義</p>
-      <p><b>n 筆</b>＝抓到的掛單則數（已去重，並濾掉起售 &lt;50 萬天幣、單價 &lt;0.5 或 &gt;8 元/萬天幣的異常卡）。</p>
-      <p><b>有效 n 筆</b>＝其中庫存 ≥1,000 萬天幣的現貨筆數（大額買得到的部分）。</p>
-      <p><b>湊滿筆數</b>＝從最便宜的掛單一路往上買，湊滿 5,000 萬天幣總共用了幾筆掛單（最後一筆通常只買到一部分）。</p>
-      <p class="mt">取樣與更新</p>
-      <p>全服 22 台每小時掃 1 次；飛馬另外每 15 分鐘輕掃 1 次（只影響飛馬數字與告警）。時間一律 Asia/Taipei。</p>
-      <p>台幣金額＝② 加權幣值換算（買 5,000 萬天幣的成本），匯率 CNY→TWD {fx:.4f}（產生時）。</p>
-      <p class="mt">估算段（灰色虛線）</p>
-      <p>實測 ② 從 10/14 19:01 開始記錄；更早的資料用舊的「實買」序列 × 比率 {r_txt} 換算（比率取自兩者同時段的實測配對，誤差 &lt;1%）。估算段的趨勢可信，但<b>絕對值只能當參考</b>，不要與實測逐點比大小。</p>
-      <p class="mt">降採樣與圖上註記</p>
-      <p>7 天窗把實測聚合成 <b>1 小時中位數</b>、30 天窗聚合成 <b>4 小時中位數</b>；淡色帶是該時段的 <b>min–max</b> 區間。滑過去看得到該時段的中位數、區間與筆數；某個時段完全沒資料就斷線，不會硬連。</p>
-      <p>圖上的淡色背景帶＝<b>第 2 次移民期（9/16–9/29）</b>；虛線直線＝實測 ② 開始記錄的時間（<b>10/14 19:01</b>）。</p>
-      <p>斷線規則：<b>原始點</b>相鄰超過 30 分鐘就斷線；<b>7 天窗（1 小時聚合）中斷 3 小時以內不會在圖上斷線</b>；30 天窗（4 小時聚合）中斷 12 小時以內不會斷線（圖上看不出短暫中斷，數字本身一樣會缺）。</p>
-      <p class="mt">薄市場</p>
-      <p>掛單總量 &lt;2 億天幣時，單一賣家就能推動數字 → 一律標「薄市場」，看趨勢不要看單點。</p>
-      <p class="mt">排名的用途</p>
-      <p>平時天幣不能跨服，全服排名只在<b>移民時</b>有意義（移民參考）。</p>
-      <p class="mt">資料來源</p>
-      <p>DD373 天幣掛單（天堂經典版台服），本次掃到 {len(ok)}／{len(d['servers']) + len(d.get('errs', []))} 台。</p>
-    </div>
-  </details>
-</section>"""
     bo_block = (f'<div class="notice">掃描暫時退避中（疑似被 DD373 擋）：'
                 f'{bo["until"][:16].replace("T", " ")} 之後自動恢復，頁面先顯示上次資料</div>' if bo else '')
 
@@ -640,15 +597,14 @@ def build(d, prev):
 <div class="notice bad" id="stale-banner" hidden></div>
 <header class="page-head">
   <h1>飛馬珀伽索斯</h1>
-  <p class="sub">DD373 · 買滿 5,000 萬天幣加權</p>
+  <p class="sub" data-tip="從最便宜的掛單一路往上買，湊滿 5,000 萬天幣的平均價；數字越大＝天幣越便宜">DD373 · 買滿 5,000 萬天幣加權</p>
 </header>
 {hero_block}
 {trend_block}
 {ranking_block}
-{method_block}
 <footer>
   產生時間 {now:%Y/%m/%d %H:%M:%S} ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD {fx:.4f}<br>
-  平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+  飛馬每 15 分鐘、全服每小時更新。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
 {chart_block}
 </body>

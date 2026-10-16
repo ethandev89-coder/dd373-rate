@@ -28,7 +28,7 @@
     <span class="li" data-tip="單次掃描偏離前後中位數太多，主線用中位數，圈圈標原始值"><svg width="12" height="12" viewBox="0 0 12 12"><circle class="lg-out" cx="6" cy="6" r="3.6"/></svg>離群點</span>
   </div>
   <details class="dsc"><summary>全服排行<span class="dsub">飛馬第 22／22 名</span></summary><div>…</div></details>
-  <details class="dsc"><summary>口徑說明<span class="dsub">方法論</span></summary><div>…</div></details>
+  <details class="dsc"><summary>第二個 details（測試狀態還原用）<span class="dsub">—</span></summary><div>…</div></details>
 </div>
 
 <script>
@@ -110,7 +110,11 @@ window.addEventListener('load', function () {
     eq('localStorage 壞值 → fallback 24 小時', document.getElementById('tr24').checked, true);
   }
   log.push('');
-  log.push('== 圖例說明泡泡（bindTips 綁在 boot，所以要等 load）==');
+  log.push('== 說明泡泡（bindTips 綁在 boot，所以要等 load）==');
+  // 頁面上所有 [data-tip] 都要有非空說明文字
+  var tips = [].slice.call(document.querySelectorAll('[data-tip]'));
+  ok('harness 的 [data-tip] 都有文字（' + tips.length + ' 個）',
+     tips.length > 0 && tips.every(function (t) { return t.getAttribute('data-tip').length > 8; }), tips.length);
   var lg = document.querySelector('.lgd [data-tip]');
   ok('圖例有離群點項目與說明文字', !!lg && lg.getAttribute('data-tip').indexOf('偏離前後中位數') >= 0, lg && lg.innerText.trim());
   if (lg) {
