@@ -539,13 +539,22 @@ def build(d, prev):
     ranking_block = ""
     if me:
         rank = rank_of[me["server"]]
+        # 漲跌：股票式小膠囊（中性色，不用紅綠）；負數用 U+2212
+        if chg24 is None:
+            chg_val = "—"
+        elif abs(chg24) < 0.05:
+            chg_val = "0.0%"
+        else:
+            chg_val = f"+{chg24:.1f}%" if chg24 > 0 else f"−{abs(chg24):.1f}%"
         hero_block = f"""
 <section class="card lg hero">
-  <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>天幣/元</span></div>
-  <p class="hero-l">{chg_line}</p>
-  <div class="hero-3">
-    <div><label data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
-    <div><label>掛單（天幣）</label><b>{me['stock_wj'] / 10000:.2f} 億</b> {thin_tag}</div>
+  <div class="hero-main">
+    <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>天幣/元</span></div>
+    <div class="hero-chg"><span class="chg-pill">{chg_val}</span><span class="chg-when">24 小時</span></div>
+  </div>
+  <div class="hero-list">
+    <div class="hero-row"><span class="hl" data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</span><span class="hv">{me['low_gold_per_twd']:,.0f}</span></div>
+    <div class="hero-row"><span class="hl">掛單（天幣）</span><span class="hv">{me['stock_wj'] / 10000:.2f} 億 {thin_tag}</span></div>
   </div>
 </section>"""
         ranking_block = f"""

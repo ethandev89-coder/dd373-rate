@@ -248,12 +248,32 @@ footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 
 .hero-n { display: flex; align-items: baseline; gap: 8px; }
 .hero-n b { font-size: 48px; font-weight: 600; letter-spacing: -.5px; line-height: 1.05; }
 .hero-n span { font-size: 17px; color: var(--label-2); }
-.hero-l { margin: 8px 0 16px; font-size: 15px; color: var(--label-2); }
-.hero-3 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.hero-3 > div { background: var(--card-2); border-radius: 12px; padding: 12px; }
-.hero-3 label { display: block; font-size: 12px; color: var(--label-2); }
-.hero-3 b { font-size: 17px; font-weight: 600; }
 @media (min-width: 1024px) { .hero-n b { font-size: 56px; } }
+
+/* ---------- Hero：股票 App 式（大數字＋漲跌膠囊／iOS 列表） ---------- */
+.hero-main { min-width: 0; }
+.hero-chg { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.chg-pill {
+  background: var(--fill); color: var(--label); font-weight: 600;
+  border-radius: 8px; padding: 4px 8px; font-size: 15px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.chg-when { font-size: 13px; color: var(--label-2); }
+.hero-list { margin: 16px 0 0; }
+.hero-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 12px 0 12px 16px;
+  border-bottom: .5px solid var(--sep); font-size: 16px;
+}
+.hero-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.hero-row .hl { color: var(--label-2); white-space: nowrap; }
+.hero-row .hv { color: var(--label); font-weight: 600; white-space: nowrap; text-align: right; }
+.hero-row .hv .tag { font-weight: 400; margin-left: 4px; }
+@media (min-width: 560px) {                     /* 桌機：大數字在左、列表在右（約 200px）垂直置中 */
+  .card.hero { display: flex; align-items: center; gap: 24px; }
+  .hero-main { flex: 1; }
+  .hero-list { flex: none; width: 200px; margin: 0; }
+}
 
 /* ---------- 群組列表（iOS Settings 樣式） ---------- */
 .glist { margin: 0; padding: 0; }
@@ -303,8 +323,7 @@ details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
 
 
 /* ---------- 手機不換行（Hero 三格、群組列表標籤） ---------- */
-.hero-3 label, .hero-3 b { white-space: nowrap; }
-.grow > span:first-child { white-space: nowrap; }
+.hero-row .hl, .grow > span:first-child { white-space: nowrap; }
 
 /* ---------- 圖例：離群點與說明泡泡 ---------- */
 .lgd .li[data-tip] { cursor: pointer; }
