@@ -319,3 +319,11 @@ details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
   border: .5px solid var(--sep); border-radius: 10px;
   padding: 8px 12px; font-size: 13px; line-height: 1.45;
 }
+
+/* ---------- Hero：台幣成本那一行 ---------- */
+.hero-nt { margin: 4px 0 0; font-size: 15px; color: var(--label-2); }
+.hero-nt b { color: var(--label); font-weight: 600; }
+
+/* ---------- 灰色 tag（底價單） ---------- */
+.tag.gray { background: var(--fill); color: var(--label-2); }
+.lgd .li[data-tip] { cursor: pointer; }

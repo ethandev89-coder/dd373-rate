@@ -199,19 +199,6 @@ def prev_sweep():
 
 
 # ---------- 歷史序列（cron 實買口徑，趨勢用） ----------
-def load_series(server=USER_SERVER, days=30):
-    d = json.load(open(HISTORY, encoding="utf-8"))
-    pts = []
-    for r in d["runs"]:
-        s = r["servers"].get(server)
-        if not s or not s.get("gold_floor"):
-            continue
-        pts.append((dt.datetime.fromisoformat(r["ts"]), s["gold_floor"],
-                    s.get("sell_gold_per_twd"), round(s.get("stock_wj", 0))))
-    pts.sort()
-    cut = dt.datetime.now().astimezone() - dt.timedelta(days=days)
-    return [p for p in pts if p[0] >= cut]
-
 
 def agg_series(points, bucket_sec):
     """降採樣：把實測點聚成固定長度的時段（台北時間對齊），每段取中位數＋min／max＋筆數。
@@ -298,21 +285,6 @@ def vw2_all_points():
     return pts
 
 
-def all_server_delta(days=3):
-    """各服 ② 幣值變化：最近 N 天均 vs 前期（9/17~9/29）均。實測優先、不足處以估算補。"""
-    pts = vw2_all_points()
-    now = dt.datetime.now()
-    res = []
-    for nm, d in pts.items():
-        vals = sorted(d.values())
-        early = [v for t, v, _e in vals if "2026-09-17" <= t.strftime("%Y-%m-%d") <= "2026-09-29"]
-        late = [v for t, v, _e in vals if t >= now - dt.timedelta(days=days)]
-        if len(early) >= 5 and len(late) >= 5:
-            e, l = sum(early) / len(early), sum(late) / len(late)
-            res.append((nm, e, l, (l / e - 1) * 100))
-    return sorted(res, key=lambda x: x[3])
-
-
 
 # ---------- 產頁 ----------
 def pct(v):
@@ -382,9 +354,6 @@ def build(d, prev):
                      key=lambda s: s["sell_gold_per_twd"])
     thin = sorted(ok, key=lambda s: s["stock_wj"])[:3]
     deep = sorted(ok, key=lambda s: -s["stock_wj"])[:3]
-    series = load_series()
-    ser_g = [(t, g) for t, g, _s, _k in series]
-    deltas = all_server_delta()
 
     # ---------- 漲跌／差值（一律文字＋▲▼–，不用 emoji） ----------
     def delta_pct(cur, old):
@@ -413,6 +382,16 @@ def build(d, prev):
             return "天幣變貴"
         return "持平"
 
+    BASE_TAG = '<span class="tag gray" data-tip="收購區只剩底價單，正常買家已撤">底價單</span>'
+
+    def is_base_price(srv, fx_):
+        """收購價（元/萬天幣）≤1.02 → 底價機器人單（正常買家 ≥1.2）"""
+        v = srv.get("sell_gold_per_twd")
+        return bool(v) and (10000.0 / (v * fx_)) <= 1.02
+
+    def base_tag_of(srv):
+        return " " + BASE_TAG if is_base_price(srv, fx) else ""
+
     prev_by_name = {x["server"]: x for x in (prev["servers"] if prev else [])}
 
     # ---------- 全服排行列（飛馬置頂、其餘依 ② 由大到小；第 2 行放細節） ----------
@@ -433,20 +412,11 @@ def build(d, prev):
             f'<span class="nm">{html.escape(srv["server"])}</span>'
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
             f'<span class="dl{hi}">{dl_txt}</span></div>'
-            f'<div class="rline2">① {srv["low_gold_per_twd"]:,.0f} ・ 變現 {format(srv["sell_gold_per_twd"], ",") if srv.get("sell_gold_per_twd") else "—"}'
-            f' ・ 吃 {srv["used"]} 筆 ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
+            f'<div class="rline2">① {srv["low_gold_per_twd"]:,.0f} ・ 變現 {format(srv["sell_gold_per_twd"], ",") if srv.get("sell_gold_per_twd") else "—"}{base_tag_of(srv)}'
+            f' ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
             f' ・ 買 5,000 萬天幣 ≈ NT${nt5000(srv):,}</div></div>')
 
     by_sell = sorted([x for x in ok if x.get("sell_gold_per_twd")], key=lambda x: x["sell_gold_per_twd"])
-    movers_up = [x for x in deltas if x[3] > 0][-4:][::-1]      # 幣值上升＝天幣變便宜
-    movers_dn = deltas[:4]                                      # 幣值下降＝天幣變貴
-
-    def mover_list(items, sign):
-        out = []
-        for nm, e, l, p in items:
-            out.append(f"<li><b>{html.escape(nm)}</b> {p:+.1f}%"
-                       f"<span class='muted'>（{e:,.0f} → {l:,.0f} 天幣/元）</span></li>")
-        return f"<ul class='movers {sign}'>{''.join(out)}</ul>"
 
     s_now = load_vw2_series(24, "vw2_gold_per_twd")     # ② 買滿 5,000 萬天幣加權（15 分輕掃 + 每小時全服）
     all_vw2 = load_vw2_series(24 * 31, "vw2_gold_per_twd")
@@ -551,14 +521,6 @@ def build(d, prev):
   </div>
 </section>"""
 
-    movers_block = f"""
-<section class="card">
-  <h2>移民期均值 vs 近 3 天<span>基準期 9/17~9/29＝第 2 次移民期（估算）／近 3 天（實測為主）｜同一把尺＝② 買滿 5,000 萬天幣加權</span></h2>
-  <div class="split">
-    <div><h3>天幣變便宜（1 元買到更多天幣）</h3>{mover_list(movers_up, 'up')}</div>
-    <div><h3>天幣變貴（1 元買到更少天幣）</h3>{mover_list(movers_dn, 'down')}</div>
-  </div>
-</section>"""
 
     # ---- 走勢圖：資料 JSON + 視窗設定 + 渲染器（全部內嵌，維持單檔、無外部依賴）----
     apple_css = open(APPLE_CSS, encoding="utf-8").read()
@@ -585,27 +547,20 @@ def build(d, prev):
             chg24 = (now_vw2 / prev_pt[1] - 1) * 100
     chg_line = (f"{gold_dir(chg24)} {abs(chg24):.1f}%（24 小時）" if chg24 is not None else "24 小時變化：資料不足")
     thin_tag = '<span class="tag">薄市場</span>' if (me and me["stock_wj"] < 20000) else ""
+    base_tag = base_tag_of(me) if me else ""
     hero_block = ""
-    glist_block = ""
     ranking_block = ""
     if me:
         rank = rank_of[me["server"]]
         hero_block = f"""
 <section class="card lg hero">
   <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>天幣/元</span></div>
+  <p class="hero-nt">買 5,000 萬天幣 ≈ <b>NT${nt5000(me):,}</b></p>
   <p class="hero-l">1 台幣買 {me['vw2_gold_per_twd']:,.0f} 天幣 · {chg_line}</p>
   <div class="hero-3">
     <div><label>最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
-    <div><label>變現</label><b>{format(me["sell_gold_per_twd"], ",") if me.get("sell_gold_per_twd") else "—"}</b></div>
+    <div><label>變現</label><b>{format(me["sell_gold_per_twd"], ",") if me.get("sell_gold_per_twd") else "—"}</b>{base_tag}</div>
     <div><label>掛單（天幣）</label><b>{me['stock_wj'] / 10000:.2f} 億</b> {thin_tag}</div>
-  </div>
-</section>"""
-        glist_block = f"""
-<section class="card">
-  <div class="glist">
-    <div class="grow"><span>買 5,000 萬天幣</span><span class="gv"><b>≈ NT${nt5000(me):,}</b></span></div>
-    <div class="grow"><span>掛單深度</span><span class="gv">總量 <b>{me['stock_wj'] / 10000:.2f} 億天幣</b>／買滿 5,000 萬天幣要吃 <b>{me['used']}</b> 筆</span></div>
-    <div class="grow"><span>全服排名</span><span class="gv"><b>第 {rank}／{n_servers} 名</b> <span class="tag">移民參考</span></span></div>
   </div>
 </section>"""
         ranking_block = f"""
@@ -623,13 +578,13 @@ def build(d, prev):
     <summary><span>口徑說明</span><span class="dsub">方法論</span></summary>
     <div class="dbody method">
       <p class="mt">同一把尺：② 買滿 5,000 萬天幣加權</p>
-      <p><b>② 買滿 5,000 萬天幣加權（本頁主數字）</b>＝從最便宜的掛單往上吃、累積到 5,000 萬天幣為止的加權平均單價，換算成天幣／元（<b>數字越大＝天幣越便宜</b>）。</p>
+      <p><b>② 買滿 5,000 萬天幣加權（本頁主數字）</b>＝從最便宜的掛單一路往上買、累積到湊滿 5,000 萬天幣為止的加權平均單價，換算成天幣／元（<b>數字越大＝天幣越便宜</b>）。</p>
       <p><b>① 最低一筆</b>＝全檔位最便宜的單筆單價（小額真的買得到的價，單位同為天幣/元）。</p>
-      <p><b>變現</b>＝DD373 收購區掛單（數字越小＝賣天幣換到越多台幣）。</p>
+      <p><b>變現</b>＝DD373 收購區掛單（數字越小＝賣天幣換到越多台幣）。收購價 ≤1.02 元/萬天幣時會標「底價單」＝收購區只剩底價機器人（正常買家 ≥1.2 元/萬天幣；實測那批是 1.0~1.0013），數字仍然是真的、賣得進去。</p>
       <p class="mt">掛單深度：筆數定義</p>
       <p><b>n 筆</b>＝抓到的掛單則數（已去重，並濾掉起售 &lt;50 萬天幣、單價 &lt;0.5 或 &gt;8 元/萬天幣的異常卡）。</p>
       <p><b>有效 n 筆</b>＝其中庫存 ≥1,000 萬天幣的現貨筆數（大額買得到的部分）。</p>
-      <p><b>吃筆</b>＝從最便宜的掛單往上吃到 5,000 萬天幣為止、總共吃掉的筆數（最後一筆可能只吃一部分）。</p>
+      <p><b>湊滿筆數</b>＝從最便宜的掛單一路往上買，湊滿 5,000 萬天幣總共用了幾筆掛單（最後一筆通常只買到一部分）。</p>
       <p class="mt">取樣與更新</p>
       <p>全服 22 台每小時掃 1 次；飛馬另外每 15 分鐘輕掃 1 次（只影響飛馬數字與告警）。時間一律 Asia/Taipei。</p>
       <p>台幣金額＝② 加權幣值換算（買 5,000 萬天幣的成本），匯率 CNY→TWD {fx:.4f}（產生時）。</p>
@@ -689,9 +644,7 @@ def build(d, prev):
 </header>
 {hero_block}
 {trend_block}
-{glist_block}
 {ranking_block}
-{movers_block}
 {method_block}
 <footer>
   產生時間 {now:%Y/%m/%d %H:%M:%S} ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD {fx:.4f}<br>
