@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head><meta charset="utf-8"><title>trend.js 測試（手動開，不發佈）</title>
-<style>body{font:13px/1.5 monospace;background:#111;color:#ddd;padding:14px}
+<!-- 一定要載入真正的設計系統：刻度的字級／顏色現在由 apple.css 決定，
+     不載入就會用瀏覽器預設字級量測，量到的寬度跟正式頁不一樣 -->
+<link rel="stylesheet" href="../static/apple.css">
+<style>body{background:#111;color:#ddd;font:13px/1.5 monospace;padding:14px}
 .ok{color:#2ecc71}.bad{color:#e74c3c}h2{font-size:14px;color:#8ab4f8;margin:18px 0 6px}
 #harness{position:absolute;left:-9999px;top:0}</style></head>
 <body>
@@ -53,7 +56,14 @@
   document.getElementById('chart-data').textContent = JSON.stringify({ now: now, real: real, est: est });
 })();
 </script>
-<script src="../static/trend.js"></script>
+<script>
+/* 測哪一支渲染器？預設測正在改版的 trend-next.js，可用 ?r=trend.js 測正式版。
+   （一定要在測試程式之前同步載入，所以用 document.write） */
+(function () {
+  var m = /[?&]r=([\w.\-]+)/.exec(location.search);
+  document.write('<script src="../static/' + (m ? m[1] : 'trend-next.js') + '"><\/script>');
+})();
+</script>
 <script>
 var T = window.DD373TREND, log = [], pass = 0, fail = 0;
 function ok(name, cond, got) {
@@ -158,10 +168,33 @@ window.__QA.ids.forEach(function (c) {
       (worst === Infinity ? 'n/a' : worst.toFixed(1) + 'px'),
       labels.length >= (c.qaWidth >= 259 ? 3 : 2) && worst >= 1.5, worst);
   if (c.qaSpan === '24h' && c.qaWidth === 836) {
-    var badge = [].slice.call(svg.querySelectorAll('text')).filter(function (t) {
-      return t.getAttribute('font-weight') === '700';
-    })[0];
+    var badge = svg.querySelector('text.badge-t');
     dok('最新值標籤是整數（無小數點）', !!badge && badge.textContent.indexOf('.') < 0, badge && badge.textContent);
+    // 顏色比對要用「解析後」的值：CSS 變數是 #0A84FF，computed style 是 rgb(10, 132, 255)
+    function probe(cssVar) {
+      var d = document.createElement('span');
+      d.style.color = 'var(' + cssVar + ')';
+      document.body.appendChild(d);
+      var v = getComputedStyle(d).color;
+      d.remove();
+      return v;
+    }
+    var lcs = getComputedStyle(svg.querySelector('path.line-real'));
+    dok('實測線顏色來自 CSS 變數 --accent、線寬 2px（B：顏色不再寫在 JS）',
+        lcs.stroke === probe('--accent') && lcs.strokeWidth === '2px',
+        { stroke: lcs.stroke, accent: probe('--accent'), w: lcs.strokeWidth });
+    dok('刻度字 11px、格線用 --sep（B：由 CSS 決定）',
+        getComputedStyle(svg.querySelector('text.xtick')).fontSize === '11px' &&
+        getComputedStyle(svg.querySelector('line.grid')).stroke === probe('--sep'),
+        { tick: getComputedStyle(svg.querySelector('text.xtick')).fontSize,
+          grid: getComputedStyle(svg.querySelector('line.grid')).stroke, sep: probe('--sep') });
+  }
+  if (c.qaSpan === '30d' && c.qaWidth === 836) {
+    var estp = svg.querySelector('path.line-est');
+    dok('估算線＝灰色虛線 1.5px／5 4（B）',
+        !!estp && getComputedStyle(estp).strokeDasharray.replace(/ /g, '') === '5px,4px' &&
+        getComputedStyle(estp).strokeWidth === '1.5px',
+        estp ? { d: getComputedStyle(estp).strokeDasharray, w: getComputedStyle(estp).strokeWidth } : null);
   }
   if (c.qaSpan === '7d' && c.qaWidth === 836) {
     var area = svg.querySelector('path[fill^="url"]');

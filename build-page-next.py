@@ -45,7 +45,8 @@ BACKOFF_HOURS = 6       # 疑似被擋時退避幾小時
 ERR_RATIO_MAX = 0.4     # 錯誤台數比例超過此值 → 判定被擋
 
 TZ = dt.timezone(dt.timedelta(hours=8))      # Asia/Taipei（台灣無日光節約，固定 +8）
-TREND_JS = os.path.join(PAGE_DIR, "static", "trend-next.js")   # 預覽版專用渲染器（改版期間不動正式版的 trend.js）   # 走勢圖渲染器（build 時內嵌進單檔頁面）
+TREND_JS = os.path.join(PAGE_DIR, "static", "trend-next.js")
+APPLE_CSS = os.path.join(PAGE_DIR, "static", "apple.css")   # 蘋果風設計系統（build 時內嵌）   # 預覽版專用渲染器（改版期間不動正式版的 trend.js）   # 走勢圖渲染器（build 時內嵌進單檔頁面）
 
 
 def ep(t):
@@ -405,6 +406,12 @@ def build(d, prev):
     age_min = int((now - ts).total_seconds() // 60)
     me_ts = dt.datetime.fromisoformat(fm_light["ts"]) if fm_light else ts
     me_age = int((now - me_ts).total_seconds() // 60)
+    if me_age <= 30:                     # D 階段會改成每 60 秒由 JS 重算
+        fresh_cls, fresh_txt = "", f"{me_age} 分鐘前"
+    elif me_age <= 60:
+        fresh_cls, fresh_txt = " warn", "資料延遲"
+    else:
+        fresh_cls, fresh_txt = " bad", f"資料停更 {me_age} 分鐘"
     fx = d["fx"]
     ok = [s for s in d["servers"] if s.get("vw2_gold_per_twd")]
     by_vw = sorted(ok, key=lambda s: -s["vw2_gold_per_twd"])
@@ -489,7 +496,7 @@ def build(d, prev):
     <div class="kpi"><label>★ 買滿 5,000 萬金（加權幣值）</label><b class="pri">{me['vw2_gold_per_twd']:,.0f}</b><i>1 台幣 ≈ N 金 <span class="{c1}">{t1}</span></i></div>
     <div class="kpi"><label>最低一筆（①）</label><b>{me['low_gold_per_twd']:,.0f}</b><i>1 台幣 ≈ N 金（起售 {me['low_wj']:,.0f} 萬金）</i></div>
     <div class="kpi"><label>變現（賣金）</label><b>{me['sell_gold_per_twd'] or '—'}</b><i>1 台幣可賣 N 金 <span class="{c2}">{t2}</span></i></div>
-    <div class="kpi"><label>掛單總量</label><b>{me['stock_wj'] / 10000:.2f} 億</b><i>{me['n']} 筆／有效 {me['n_eff']} 筆</i></div>
+    <div class="kpi"><label>掛單總量</label><b>{me['stock_wj'] / 10000:.2f} 億</b><i>{me['n']} 筆／有效 {me['n_eff']} 筆{'　<span class="tag">薄市場</span>' if me['stock_wj'] < 20000 else ''}</i></div>
   </div>
   <div class="notes">
     <div>📍 全服 22 台排名：幣值（買金划算度）<b>第 {rank} 名</b>／變現划算度 <b>第 {sell_rank} 名</b></div>
@@ -537,18 +544,19 @@ def build(d, prev):
     }
     chart_windows = [
         # gapReal／gapEst：相鄰兩筆超過此秒數就斷線（實測 30 分；估算抽樣稀疏 → 用 12 小時）
-        {"id": "24h", "label": "24 小時", "span": 86400, "color": "#e74c3c", "gapReal": 1800, "gapEst": 43200},
-        {"id": "48h", "label": "48 小時", "span": 172800, "color": "#d35400", "gapReal": 1800, "gapEst": 43200},
-        {"id": "7d", "label": "7 天", "span": 604800, "color": "#e67e22", "gapReal": 1800, "gapEst": 43200},
-        {"id": "30d", "label": "30 天", "span": 2592000, "color": "#c0392b", "gapReal": 1800, "gapEst": 43200},
+        {"id": "24h", "label": "24 小時", "span": 86400, "gapReal": 1800, "gapEst": 43200},
+        {"id": "48h", "label": "48 小時", "span": 172800, "gapReal": 1800, "gapEst": 43200},
+        {"id": "7d", "label": "7 天", "span": 604800, "gapReal": 1800, "gapEst": 43200},
+        {"id": "30d", "label": "30 天", "span": 2592000, "gapReal": 1800, "gapEst": 43200},
     ]
 
-    def panel(win_id, cls, dot, legend, npts):
+    def panel(win_id, cls, npts):
+        """一個時間窗＝本時窗摘要＋圖（圖例在分段控制下方同一行）"""
         if npts < 2:
             return (f'<div class="panel {cls}"><p class="muted">這個時間窗還在累積（目前 {npts} 點，'
-                    f'② 口徑自 {all_vw2[0][0]:%m/%d %H:%M} 開始記錄）</p><div class="legend">{legend}</div></div>')
-        return (f'<div class="panel {cls}"><div class="chart" data-win="{win_id}"></div>'
-                f'<div class="legend"><span class="dot {dot}"></span>{legend}</div></div>')
+                    f'② 口徑自 {all_vw2[0][0]:%m/%d %H:%M} 開始記錄）</p></div>')
+        return (f'<div class="panel {cls}"><div class="wsum" data-win="{win_id}"></div>'
+                f'<div class="chart" data-win="{win_id}"></div></div>')
 
     acc_note = (f"② 口徑自 {all_vw2[0][0]:%m/%d %H:%M} 開始記錄"
                 + (f"（目前累積 {span_h:.0f} 小時）" if span_h else "")
@@ -564,17 +572,19 @@ def build(d, prev):
     <div class="tabbar">
       <label for="tr24">24 小時</label><label for="tr48">48 小時</label><label for="tr7">7 天</label><label for="tr30">30 天</label>
     </div>
+    <div class="lgd">
+      <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-real" d="M1,4 H19"/></svg>實測</span>
+      <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
+    </div>
     <div class="panels">
-      {panel("24h", "p24", "red", vw2_note + "<br>數字＝1 台幣買到幾金（買滿 5,000 萬金加權），<b>越高＝金越便宜</b>", n24)}
-      {panel("48h", "p48", "burnt", f"實線＝實測 ②｜{n48} 點｜{latest_txt}<br>本窗全為實測（② 口徑自 {all_vw2[0][0]:%m/%d %H:%M} 起連續記錄，無估算段）；數字＝1 台幣買到幾金，<b>越高＝金越便宜</b>", n48)}
-      {panel("7d", "p7", "orange", f"實線＝實測 ②｜{n7d} 點｜{latest_txt}{est_legend}<br>{acc_note}", n7d)}
-      {panel("30d", "p30", "red", f"實線＝實測 ②｜{n30d} 點｜{latest_txt}{est_legend}<br>{acc_note}", n30d)}
+      {panel("24h", "p24", n24)}
+      {panel("48h", "p48", n48)}
+      {panel("7d", "p7", n7d)}
+      {panel("30d", "p30", n30d)}
     </div>
   </div>
   <div class="notes">
-    <div>📏 四個頁籤＋上方表格／KPI <b>全部同一把尺</b>＝<b>② 買滿 5,000 萬金加權幣值</b>（1 台幣≈N 金，越高＝金越便宜），線尾都接到現在。</div>
-    <div>🧮 <b>灰虛線＝估算 ②</b>：實測 ② 只從 {all_vw2[0][0]:%m/%d %H:%M} 開始記錄；更早的用舊的「實買」序列 × 比率 {r_txt} 換算（比率取自兩者同時段的實測配對，誤差 &lt;1%，但仍屬<b>估算</b>，趨勢可信、絕對值只能當參考）。48 小時窗完全落在實測範圍內，所以沒有虛線。</div>
-    <div>ℹ️ {acc_note}。</div>
+    <div class="muted">同一把尺：② 買滿 5,000 萬金加權（1 台幣 ≈ N 金，越高＝金越便宜）；虛線＝估算 ②（舊的實買序列 × 比率 {r_txt} 換算，非實測）。完整方法論見頁尾「口徑說明」。</div>
   </div>
 </section>
 
@@ -587,6 +597,7 @@ def build(d, prev):
 </section>"""
 
     # ---- 走勢圖：資料 JSON + 視窗設定 + 渲染器（全部內嵌，維持單檔、無外部依賴）----
+    apple_css = open(APPLE_CSS, encoding="utf-8").read()
     trend_js_src = open(TREND_JS, encoding="utf-8").read()
     chart_block = (
         '<script type="application/json" id="chart-data">'
@@ -606,78 +617,14 @@ def build(d, prev):
 <meta name="robots" content="noindex">
 <title>天堂經典版 天幣幣值（DD373 全服）— 預覽版</title>
 <style>
-:root{{--bg:#0f1419;--card:#161d26;--card2:#1b2330;--line:#263040;--fg:#e8edf3;--muted:#8a97a6;--red:#e74c3c;--green:#2ecc71;--gold:#f1c40f}}
-*{{box-sizing:border-box}}
-body{{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,"PingFang TC","Hiragino Sans GB","Microsoft JhengHei",sans-serif;padding:14px max(12px,env(safe-area-inset-left)) 40px}}
-.preview-banner{{background:#f1c40f;color:#111;font-size:12px;padding:6px 12px;text-align:center;font-weight:600}}
-.preview-banner a{{color:#111;text-decoration:underline}}
-header{{margin:4px 0 14px}}
-h1{{font-size:19px;margin:0 0 4px}}
-h2{{font-size:15px;margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;justify-content:space-between}}
-h2 span{{font-size:11px;color:var(--muted);font-weight:400}}
-h3{{font-size:12.5px;margin:0 0 6px}}
-.card{{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px;margin:0 0 12px}}
-.card.accent{{background:linear-gradient(180deg,#1b2430,#161d26);border-color:#33415a}}
-.sub{{color:var(--muted);font-size:12px}}
-.kpis{{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 0 10px}}
-.kpi{{background:var(--card2);border-radius:9px;padding:9px 10px}}
-.kpi label{{display:block;font-size:11px;color:var(--muted)}}
-.kpi b{{font-size:19px;display:block;line-height:1.25}}
-.kpi i{{font-size:11px;color:var(--muted);font-style:normal}}
-.notes div{{font-size:12.5px;color:#c6d0da;margin:3px 0}}
-.up{{color:var(--green)}} .down{{color:var(--red)}} .flat{{color:var(--muted)}}
-.pri{{color:var(--gold) !important;font-weight:700}}
-td.pri{{background:rgba(241,196,15,.12);box-shadow:inset 1px 0 0 rgba(241,196,15,.35),inset -1px 0 0 rgba(241,196,15,.35)}}
-th.pri{{color:var(--gold) !important;background:#20293a}}
-.mob{{display:block}}
-.full{{display:none}}
-.mrow{{padding:7px 2px;border-bottom:1px solid var(--line)}}
-.mrow.me{{background:#20304a;border-radius:6px;padding:7px 7px}}
-.mline1{{display:flex;align-items:baseline;gap:6px}}
-.mline1 .rk{{color:var(--muted);font-size:11px;width:16px;flex:none}}
-.mline1 .nm{{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-.mline1 .nm.me{{font-weight:700}}
-.mline1 .vw{{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;flex:none}}
-.mline1 .dl{{font-size:11px;text-align:right;font-variant-numeric:tabular-nums;flex:none;min-width:58px}}
-.mline2{{font-size:11px;color:#9aa7b6;margin-top:1px}}
-table{{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}}
-th,td{{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}}
-th{{font-size:11px;color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--card)}}
-td.nm,th.nm{{text-align:left;font-size:12.5px}}
-td.rk{{color:var(--muted);font-size:11px;width:20px}}
-td.num{{font-size:12.5px}}
-td.sm{{font-size:11px;color:#b7c2ce}}
-td.hi{{font-weight:700}}
-tr.me{{background:#20304a}}
-tr.me td.nm{{font-weight:700}}
-.tag{{background:#2ecc71;color:#04121f;border-radius:4px;font-size:10px;padding:1px 4px;vertical-align:1px}}
-.legend{{font-size:11px;color:var(--muted);margin:4px 0 8px}}
-.dot{{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}}
-.dot.red{{background:var(--red)}}
-.dot.orange{{background:#e67e22}}
-.dot.burnt{{background:#d35400}}
-.tabs input{{display:none}}
-.tabbar{{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 10px}}
-.tabbar label{{font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);cursor:pointer}}
-#tr24:checked ~ .tabbar label[for=tr24],#tr48:checked ~ .tabbar label[for=tr48],#tr7:checked ~ .tabbar label[for=tr7],#tr30:checked ~ .tabbar label[for=tr30]{{background:#2b3b52;color:#fff;border-color:#4a5f80}}
-.panels > .panel{{display:none}}
-#tr24:checked ~ .panels .p24,#tr48:checked ~ .panels .p48,#tr7:checked ~ .panels .p7,#tr30:checked ~ .panels .p30{{display:block}}
-.chart{{margin:6px 0 2px;width:100%;position:relative}}
-.chart svg{{display:block}}
-.movers{{margin:0;padding-left:18px;font-size:12.5px}}
-.movers li{{margin:2px 0}}
-.split{{display:grid;grid-template-columns:1fr;gap:10px}}
-.muted{{color:var(--muted)}}
-footer{{color:var(--muted);font-size:11px;margin-top:14px;line-height:1.7}}
-a{{color:#6ab0ff}}
-@media(min-width:560px){{.kpis{{grid-template-columns:repeat(4,1fr)}}.split{{grid-template-columns:1fr 1fr}}}}
-@media(min-width:700px){{.mob{{display:none}}.full{{display:block}}}}
+{apple_css}
 </style>
 </head>
 <body>
-<div class="preview-banner">預覽版・資料停在 {me_ts:%m/%d %H:%M}　（正式版：<a href="./index.html">index.html</a>）</div>
+<div class="preview-banner">預覽版・資料停在 {me_ts:%m/%d %H:%M}（<span data-ts="{ep(me_ts)}" data-rel="1">{me_age} 分鐘前</span>）　正式版：<a href="./index.html">index.html</a></div>
 <header>
-  <h1>天堂經典版 天幣幣值</h1>
+  <div class="hrow"><h1>天堂經典版 天幣幣值</h1>
+    <span class="capsule{fresh_cls}"><span class="d"></span>{fresh_txt}</span></div>
   <div class="sub">資料來源：DD373 天幣掛單 ｜ 匯率 CNY→TWD {fx:.4f} ｜ 掃到 {len(ok)}/{len(d['servers']) + len(d.get('errs', []))} 台
   ｜ 全服掃描 {ts:%m/%d %H:%M}（{age_min} 分鐘前）{'　⚠️ 使用快取' if d.get('cached') and not fm_light else ''}
   ｜ 下次全服重掃 約 {next_upd:%H:%M}（±6 分）</div>

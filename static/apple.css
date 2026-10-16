@@ -1,0 +1,226 @@
+/* ============================================================================
+   天幣幣值頁 — 蘋果風設計系統（B 階段）
+   規則：
+     - 所有顏色只寫在 :root（淺色）與 @media (prefers-color-scheme: dark) 兩處，
+       其他地方一律用 var(--xxx)，不得出現寫死的色碼。
+     - 圖表是 JS 畫的 SVG，元素只掛 class，顏色／線寬／字級全部由這張表決定
+       ⇒ 深淺色切換時 CSS 變數自己會變，圖表不用重讀顏色也會跟著變。
+     - 字體不載入外部字型（單檔、無外部依賴）；數字用 tabular-nums 對齊。
+     - 圓角 12（主卡 16）、不用陰影、不用漸層（圖表面積淡出除外）；
+       間距只用 4／8／12／16／24／32；頁面左右 16；桌機內容最寬 960 置中。
+   ========================================================================== */
+:root {
+  color-scheme: light dark;
+  --bg: #F2F2F7;
+  --card: #FFFFFF;
+  --card-2: #F2F2F7;
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, .6);
+  --label-3: rgba(60, 60, 67, .3);
+  --sep: rgba(60, 60, 67, .29);
+  --fill: rgba(118, 118, 128, .12);
+  --accent: #007AFF;
+  --gray: #8E8E93;
+  --ok: #34C759;
+  --warn: #FF9500;
+  --bad: #FF3B30;
+  --on-accent: #FFFFFF;          /* 主色底上的文字（徽章、膠囊） */
+  --seg-sel: #FFFFFF;            /* 分段控制「選中」的小方塊 */
+  --warn-soft: rgba(255, 149, 0, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1C1C1E;
+    --card-2: #2C2C2E;
+    --label: #FFFFFF;
+    --label-2: rgba(235, 235, 245, .6);
+    --label-3: rgba(235, 235, 245, .3);
+    --sep: rgba(84, 84, 88, .6);
+    --fill: rgba(118, 118, 128, .24);
+    --accent: #0A84FF;
+    --gray: #8E8E93;
+    --ok: #30D158;
+    --warn: #FF9F0A;
+    --bad: #FF453A;
+    --seg-sel: #636366;
+    --warn-soft: rgba(255, 159, 10, .16);
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  padding: 16px 16px 32px;
+  background: var(--bg);
+  color: var(--label);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC",
+        "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 1024px) { body { max-width: 960px; margin: 0 auto; padding-bottom: 32px; } }
+
+a { color: var(--accent); text-decoration: none; }
+
+/* ---------- 預覽版橫幅 ---------- */
+.preview-banner {
+  margin: -16px -16px 16px;
+  padding: 8px 16px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 13px;
+  text-align: center;
+}
+.preview-banner a { color: var(--warn); text-decoration: underline; }
+
+/* ---------- 標題 ---------- */
+header { margin: 0 0 16px; }
+h1 { font-size: 28px; font-weight: 700; letter-spacing: -.4px; margin: 0 0 4px; }
+.sub { color: var(--label-2); font-size: 14px; }
+h2 {
+  font-size: 20px; font-weight: 600; margin: 0 0 12px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between;
+}
+h2 span { font-size: 13px; font-weight: 400; color: var(--label-2); }
+h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 16px;
+}
+.card.accent, .card.lg { border-radius: 16px; }
+.notes div { font-size: 13px; color: var(--label-2); margin: 4px 0; }
+.muted { color: var(--label-2); }
+
+/* ---------- 狀態膠囊／Tag ---------- */
+.capsule {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--fill); border-radius: 999px; padding: 4px 12px;
+  font-size: 13px; color: var(--label-2);
+}
+.capsule .d { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.capsule.warn { color: var(--warn); }
+.capsule.warn .d { background: var(--warn); }
+.capsule.bad { color: var(--bad); }
+.capsule.bad .d { background: var(--bad); }
+.tag {
+  display: inline-block; font-size: 12px; color: var(--warn);
+  background: var(--warn-soft); border-radius: 6px; padding: 2px 8px;
+}
+
+/* ---------- KPI 格（C 階段會換成 Hero 卡） ---------- */
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 4px 0 12px; }
+.kpi { background: var(--card-2); border-radius: 12px; padding: 12px; }
+.kpi label { display: block; font-size: 12px; color: var(--label-2); }
+.kpi b { display: block; font-size: 24px; font-weight: 600; line-height: 1.25; }
+.kpi i { font-size: 13px; font-style: normal; color: var(--label-2); }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+.pri { color: var(--accent); font-weight: 600; }
+td.pri, th.pri { color: var(--accent); }
+td.pri { background: var(--fill); }
+
+/* 漲跌不用紅綠（台灣紅＝漲，容易看反）：只用次要文字色＋▲▼ 與文字說明 */
+.up, .down { color: var(--label-2); }
+.flat { color: var(--label-3); }
+
+/* ---------- 全服排行（C 階段改成群組列表；此處先套色票） ---------- */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; border-bottom: .5px solid var(--sep); text-align: right; white-space: nowrap; }
+th { font-size: 12px; font-weight: 500; color: var(--label-2); position: sticky; top: 0; background: var(--card); }
+td.nm, th.nm { text-align: left; font-size: 14px; color: var(--label); }
+td.rk { color: var(--label-3); font-size: 12px; width: 20px; }
+td.sm { font-size: 12px; color: var(--label-2); }
+td.hi { font-weight: 600; }
+tr.me { background: var(--fill); }
+tr.me td.nm { font-weight: 600; }
+.mobs { display: block; }
+.full { display: none; }
+@media (min-width: 700px) { .mobs { display: none; } .full { display: block; } }
+.mrow { padding: 8px 2px; border-bottom: .5px solid var(--sep); }
+.mrow.me { background: var(--fill); border-radius: 8px; padding: 8px; }
+.mline1 { display: flex; align-items: baseline; gap: 8px; }
+.mline1 .rk { color: var(--label-3); font-size: 12px; width: 16px; flex: none; }
+.mline1 .nm { flex: 1; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mline1 .nm.me { font-weight: 600; }
+.mline1 .vw { font-weight: 600; font-size: 16px; flex: none; }
+.mline1 .dl { font-size: 12px; text-align: right; flex: none; min-width: 58px; }
+.mline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+
+/* ---------- 分段控制（iOS UISegmentedControl） ---------- */
+.tabs input { display: none; }
+.tabbar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  background: var(--fill); border-radius: 9px; padding: 2px; height: 32px; margin: 0 0 12px;
+}
+.tabbar label {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--label); border-radius: 7px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#tr24:checked ~ .tabbar label[for=tr24],
+#tr48:checked ~ .tabbar label[for=tr48],
+#tr7:checked ~ .tabbar label[for=tr7],
+#tr30:checked ~ .tabbar label[for=tr30] { background: var(--seg-sel); font-weight: 600; }
+.panels > .panel { display: none; }
+#tr24:checked ~ .panels .p24,
+#tr48:checked ~ .panels .p48,
+#tr7:checked ~ .panels .p7,
+#tr30:checked ~ .panels .p30 { display: block; }
+
+/* ---------- 走勢圖 ---------- */
+.chart { position: relative; width: 100%; margin: 0; touch-action: pan-y; }
+.chart svg { display: block; }
+.chart svg .grid { stroke: var(--sep); stroke-width: 1; }
+.chart svg .ytick, .chart svg .xtick { fill: var(--label-2); font-size: 11px; }
+.chart svg .stop-top { stop-color: var(--accent); stop-opacity: .20; }
+.chart svg .stop-bot { stop-color: var(--accent); stop-opacity: 0; }
+.chart svg .line-est { fill: none; stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart svg .line-real { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart svg .outlier { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.chart svg .band { fill: var(--accent); fill-opacity: .10; stroke: none; }
+.chart svg .badge { fill: var(--accent); }
+.chart svg .badge-t { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
+.chart svg .cross { stroke: var(--sep); stroke-width: 1; pointer-events: none; }
+.chart svg .cross-dot { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; pointer-events: none; }
+.chart svg .note-band { fill: var(--fill); }
+.chart svg .note-line { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.chart svg .note-txt { fill: var(--label-2); font-size: 11px; }
+
+/* 圖例（分段控制下方同一行） */
+.lgd { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--label-2); margin: 0 0 8px; }
+.lgd .li { display: inline-flex; align-items: center; gap: 8px; }
+.lgd svg { display: block; }
+.lgd .lg-real { stroke: var(--accent); stroke-width: 2; }
+.lgd .lg-est { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.lgd .lg-band { fill: var(--accent); fill-opacity: .10; }
+
+/* 本時窗摘要（圖上方一行） */
+.wsum { font-size: 13px; color: var(--label-2); margin: 0 0 4px; }
+.wsum b { color: var(--label); font-weight: 600; }
+
+/* 十字線 tooltip */
+.tt {
+  position: absolute; z-index: 3; pointer-events: none; opacity: 0;
+  transition: opacity .12s ease;
+  /* 用 --card-2：tooltip 疊在同為 --card 的走勢卡上，若用 --card 會完全看不見（深色模式實測） */
+  background: var(--card-2); color: var(--label);
+  border: .5px solid var(--sep); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; line-height: 1.45; white-space: nowrap;
+}
+.tt.on { opacity: 1; }
+.tt .t1 { color: var(--label-2); font-size: 12px; }
+.tt .v { font-size: 15px; font-weight: 600; }
+.tt .src { color: var(--label-2); font-size: 12px; }
+
+/* ---------- 其他 ---------- */
+.movers { margin: 0; padding-left: 16px; font-size: 14px; color: var(--label-2); }
+.movers li { margin: 2px 0; }
+.movers b { color: var(--label); font-weight: 600; }
+.split { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px) { .split { grid-template-columns: 1fr 1fr; } }
+footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 1.6; }
