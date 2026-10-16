@@ -268,11 +268,11 @@ footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 
 .hero-row:last-child { border-bottom: 0; padding-bottom: 0; }
 .hero-row .hl { color: var(--label-2); white-space: nowrap; }
 .hero-row .hv { color: var(--label); font-weight: 600; white-space: nowrap; text-align: right; }
-.hero-row .hv .tag { font-weight: 400; margin-left: 4px; }
+.hero-row .hl .tag { font-weight: 400; margin-left: 6px; }
 @media (min-width: 560px) {                     /* 桌機：大數字在左、列表在右（約 200px）垂直置中 */
   .card.hero { display: flex; align-items: center; gap: 24px; }
   .hero-main { flex: 1; }
-  .hero-list { flex: none; width: 200px; margin: 0; }
+  .hero-list { flex: none; min-width: 200px; margin: 0; }   /* 寬度隨最寬一列（掛單＋薄市場 tag）自動長，數值仍與右緣對齊 */
 }
 
 /* ---------- 群組列表（iOS Settings 樣式） ---------- */

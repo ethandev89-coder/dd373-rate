@@ -361,9 +361,11 @@
     var vals = pts.map(function (p) { return p.v; });
     var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
     var chg = (last.v / first.v - 1) * 100;
-    var arrow = chg > 0.05 ? '▲' : (chg < -0.05 ? '▼' : '—');
+    // 寫法與 Hero 漲跌膠囊一致：正值「+0.9%」、負值用真正的減號「−0.9%」、持平「0.0%」，不加 ▲▼
+    var chgtxt = Math.abs(chg) < 0.05 ? '0.0%'
+               : (chg > 0 ? '+' + chg.toFixed(1) : '−' + Math.abs(chg).toFixed(1)) + '%';
     var hasEst = pts.some(function (p) { return p.src === 'est'; });
-    el.innerHTML = '本時窗 ' + arrow + ' ' + (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%' +
+    el.innerHTML = '本時窗 ' + chgtxt +
                    '　高 <b>' + num(hi) + '</b>　低 <b>' + num(lo) + '</b>' +
                    (hasEst ? '　<span class="tag">含估算</span>' : '');
   }

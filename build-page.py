@@ -554,7 +554,7 @@ def build(d, prev):
   </div>
   <div class="hero-list">
     <div class="hero-row"><span class="hl" data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</span><span class="hv">{me['low_gold_per_twd']:,.0f}</span></div>
-    <div class="hero-row"><span class="hl">掛單（天幣）</span><span class="hv">{me['stock_wj'] / 10000:.2f} 億 {thin_tag}</span></div>
+    <div class="hero-row"><span class="hl">掛單（天幣）{thin_tag}</span><span class="hv">{me['stock_wj'] / 10000:.2f} 億</span></div>
   </div>
 </section>"""
         ranking_block = f"""
