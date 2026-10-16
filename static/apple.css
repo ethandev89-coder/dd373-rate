@@ -224,3 +224,84 @@ tr.me td.nm { font-weight: 600; }
 .split { display: grid; grid-template-columns: 1fr; gap: 12px; }
 @media (min-width: 640px) { .split { grid-template-columns: 1fr 1fr; } }
 footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 1.6; }
+
+/* ============================================================================
+   C 階段：頁面結構（導覽列／大標／Hero／群組列表／details／頁尾）
+   ========================================================================== */
+
+/* ---------- 導覽列：sticky、毛玻璃 ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -16px -16px 16px; padding: 12px 16px;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.nav-t { font-size: 17px; font-weight: 600; }
+
+/* ---------- 頁面大標 ---------- */
+.page-head { margin: 0 0 16px; }
+.page-head .sub { margin: 0; }
+
+/* ---------- Hero 卡 ---------- */
+.hero-n { display: flex; align-items: baseline; gap: 8px; }
+.hero-n b { font-size: 48px; font-weight: 600; letter-spacing: -.5px; line-height: 1.05; }
+.hero-n span { font-size: 17px; color: var(--label-2); }
+.hero-l { margin: 8px 0 16px; font-size: 15px; color: var(--label-2); }
+.hero-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hero-3 > div { background: var(--card-2); border-radius: 12px; padding: 12px; }
+.hero-3 label { display: block; font-size: 12px; color: var(--label-2); }
+.hero-3 b { font-size: 17px; font-weight: 600; }
+@media (min-width: 1024px) { .hero-n b { font-size: 56px; } }
+
+/* ---------- 群組列表（iOS Settings 樣式） ---------- */
+.glist { margin: 0; padding: 0; }
+.grow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 12px 0 12px 16px;
+  border-bottom: .5px solid var(--sep); font-size: 16px;
+}
+.grow:last-child { border-bottom: 0; }
+.grow .gv { color: var(--label-2); text-align: right; }
+.grow .gv b { color: var(--label); font-weight: 600; }
+
+/* ---------- 全服排行列 ---------- */
+.rrow { min-height: 44px; padding: 12px 0 12px 16px; border-bottom: .5px solid var(--sep); }
+.rrow:last-child { border-bottom: 0; }
+.rrow.me { background: var(--fill); border-radius: 8px; padding-left: 12px; padding-right: 12px; }
+.rline1 { display: flex; align-items: baseline; gap: 8px; }
+.rline1 .rk { color: var(--label-3); font-size: 12px; min-width: 20px; }
+.rline1 .nm {
+  flex: 1; font-size: 16px; color: var(--label); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rrow.me .rline1 .nm { color: var(--accent); font-weight: 600; }
+.rline1 .vw { font-weight: 600; font-size: 16px; }
+.rline1 .dl { font-size: 13px; color: var(--label-3); min-width: 56px; text-align: right; }
+.rline1 .dl.hi { color: var(--label); font-weight: 600; }   /* |Δ| >= 2% 才強調（不用紅綠） */
+.rline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+
+/* ---------- details（全服排行／口徑說明共用） ---------- */
+details.dsc > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 44px; font-size: 20px; font-weight: 600;
+  cursor: pointer; list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+details.dsc > summary::-webkit-details-marker { display: none; }
+details.dsc > summary .dsub {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 400; color: var(--label-2);
+}
+details.dsc > summary .dsub::after {
+  content: "›"; font-size: 17px; color: var(--label-3);
+  transition: transform .15s ease;
+}
+details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
+.dbody { margin-top: 12px; }
+
+/* ---------- 口徑說明 ---------- */
+.method p { margin: 0 0 8px; font-size: 13px; color: var(--label-2); }
+.method p b { color: var(--label); }
+.method .mt { font-size: 15px; font-weight: 600; color: var(--label); margin: 16px 0 8px; }

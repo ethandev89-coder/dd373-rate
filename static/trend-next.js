@@ -378,15 +378,22 @@
 
     // 顯示的數值：離群點顯示原始值（主線畫的是平滑後的中位數）
     var shown = p.o ? p.raw : p.v;
-    var diff = prev ? shown - (prev.o ? prev.raw : prev.v) : null;
-    var pct = (prev && (prev.o ? prev.raw : prev.v)) ? diff / (prev.o ? prev.raw : prev.v) * 100 : null;
-    var arrow = diff === null ? '' : (diff > 0.05 ? '▲ +' : (diff < -0.05 ? '▼ ' : '— '));
+    var prevV = prev ? (prev.o ? prev.raw : prev.v) : null;
+    var diff = prev ? shown - prevV : null;
+    var pct = prevV ? diff / prevV * 100 : null;
+    var difftxt;
+    if (diff === null) {
+      difftxt = '';
+    } else if (Math.abs(diff) < 0.5) {
+      difftxt = '較前一筆 ±0（' + (pct === null ? '0.0' : pct.toFixed(1)) + '%）';
+    } else {
+      difftxt = '較前一筆 ' + (diff > 0 ? '▲ +' : '▼ −') + num(Math.abs(diff)) +
+                (pct === null ? '' : '（' + (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%）');
+    }
     tt.innerHTML =
       '<div class="t1">' + fmtFull(p.t) + '</div>' +
       '<div class="v">' + num(shown) + ' 金/元</div>' +
-      (diff === null ? '' :
-        '<div>' + arrow + num(Math.abs(diff)) +
-        (pct === null ? '' : '（' + (pct >= 0 ? '+' : '') + pct.toFixed(1) + '%）') + '</div>') +
+      (difftxt ? '<div>' + difftxt + '</div>' : '') +
       '<div class="src">來源：' + (p.src === 'real' ? '實測' : '估算') +
       (p.o ? '（離群點・原始值；主線為中位數 ' + num(p.v) + '）' : '') + '</div>';
     tt.classList.add('on');

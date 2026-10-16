@@ -53,10 +53,11 @@ trap 'rm -rf "$LOCK"' EXIT
     python3 backfill-vw2.py || true          # 刷新「估算 ②」長歷史（由舊的實買序列換算）
     python3 build-page.py
   fi
-  if [ -z "$(git status --porcelain docs/index.html data/page-data.json)" ]; then
+  if [ -z "$(git status --porcelain docs/index.html data/page-data.json docs/version.json data/vw2-series.json)" ]; then
     echo "[publish] 頁面無變化，略過 push"
   else
-    git add docs/index.html data/page-data.json
+    git add docs/index.html data/page-data.json data/vw2-series.json
+    [ -f docs/version.json ] && git add docs/version.json || true     # 正式版切換後才有這個檔
     git commit -q -m "update $(date '+%Y-%m-%d %H:%M') 幣價" || true
     git push -q origin main
     echo "[publish] pushed"
