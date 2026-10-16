@@ -1,0 +1,355 @@
+/* ============================================================================
+   飛馬走勢圖 — 手刻 SVG 渲染器（A 版：含 P0 遺留三修正）
+   原則：
+     1) X 軸＝真實時間線性比例（絕不用資料點索引）
+     2) X 刻度級距從 [1h,3h,6h,12h,1d,2d,7d,14d] 挑「刻度數 5~8」的最小級距，
+        但**標籤不重疊優先**：會重疊就往上跳級（允許掉到 3~4 個刻度），
+        最後還有 DOM 實測保險（真的擠就再隔一個標）。
+     3) 對齊台北時間：整點 tick = floor((t + 8h) / step) × step − 8h；
+        日以上（1d/2d/7d/14d）錨在「台北時間週一 00:00」
+     4) Y 軸 nice ticks：級距 1/2/2.5/5 × 10^n，上下各留 5% padding
+     5) 以 ResizeObserver 依實際像素寬高重繪（不用 viewBox 拉伸）；
+        刻度字 11px、最新值標籤 12px、實測線 2px（固定像素，不隨寬度縮放）
+     6) 面積填色只在實測資料本身範圍（第一筆→最後一筆），不從圖表左緣起畫
+     7) 十字線＋tooltip 用 pointer events（滑鼠／觸控共用同一套）
+     8) 最新值標籤貼在右側 Y 軸上；數字一律四捨五入成整數（與頁面其他處一致）
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var TZOFF = 8 * 3600;                                   // Asia/Taipei（台灣無日光節約，固定 +8）
+  var HOUR = 3600, DAY = 86400;
+  var STEPS = [HOUR, 3 * HOUR, 6 * HOUR, 12 * HOUR, DAY, 2 * DAY, 7 * DAY, 14 * DAY];
+  var FONT = 11, FONT_BADGE = 12, LW = 2, LW_EST = 1.6;
+  var CH_LABEL = 6.2;                                     // 11px 數字估計字寬（第一輪排版的估計值）
+  var MIN_GAP_PAD = 6;                                    // 標籤之間至少留的空白
+
+  /* ---------- 時間（台北） ---------- */
+  function tp(t) {
+    var d = new Date((t + TZOFF) * 1000);
+    return { Y: d.getUTCFullYear(), M: d.getUTCMonth() + 1, D: d.getUTCDate(),
+             h: d.getUTCHours(), m: d.getUTCMinutes() };
+  }
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtDate(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D); }
+  function fmtHM(t) { var p = tp(t); return p2(p.h) + ':' + p2(p.m); }
+  function fmtFull(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
+  function isMidnight(t) { var p = tp(t); return p.h === 0 && p.m === 0; }
+  function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
+
+  /* ---------- X 刻度 ---------- */
+  // 台北「週一 00:00」的日序（day 0 = 1970-01-01 台北 = 週四 → 週一 ≡ 4 (mod 7)）
+  function mondayAnchorDay(dayIdx) { return dayIdx - ((((dayIdx - 4) % 7) + 7) % 7); }
+
+  function ticksFor(x0, x1, step) {
+    var out = [], i;
+    if (step % DAY === 0) {                                // 日以上：以週一為錨
+      var n = step / DAY;
+      var d0 = Math.floor((x0 + TZOFF) / DAY), d1 = Math.floor((x1 + TZOFF) / DAY);
+      var anchor = mondayAnchorDay(d0);
+      var k = Math.floor((d0 - anchor) / n);
+      for (i = anchor + k * n; i <= d1; i += n) {
+        var t = i * DAY - TZOFF;
+        if (t >= x0 && t <= x1) out.push(t);
+      }
+      return out;
+    }
+    var k0 = Math.ceil((x0 + TZOFF) / step), k1 = Math.floor((x1 + TZOFF) / step);
+    for (i = k0; i <= k1; i++) out.push(i * step - TZOFF);
+    return out;
+  }
+
+  // 標籤文字：整日 → M/D，其餘 → HH:MM（跨日那一格顯示日期）
+  function tickLabel(t, step) {
+    if (step >= DAY) return fmtDate(t);
+    return isMidnight(t) ? fmtDate(t) : fmtHM(t);
+  }
+
+  function maxLabelPx(ticks, step) {
+    var m = 0;
+    for (var i = 0; i < ticks.length; i++) {
+      var w = tickLabel(ticks[i], step).length * CH_LABEL + MIN_GAP_PAD;
+      if (w > m) m = w;
+    }
+    return m || 40;
+  }
+
+  // 相鄰刻度在畫面上的 px 間距（時間等距 → 像素也等距）
+  function tickGapPx(pxInner, step, x0, x1) { return pxInner * step / (x1 - x0); }
+
+  /* 選級距（三段式）：
+     1) 首選：刻度數 5~8 且標籤不重疊 → 取最小級距
+     2) 次選：沒有 5~8 時，取「刻度數最接近 5」且不重疊、且 >=3 個刻度的級距
+        （例如 30 天窗：2d 會擠出 16 個刻度、7d 剛好 4 個 → 取 7d 週刻度）
+     3) 都不行 → 用最大級距，由 labelEvery／DOM 實測隔一個標收拾 */
+  function chooseStep(x0, x1, pxInner) {
+    var i, tk, gap, need, n, best = null, fallback = null, bestDist = Infinity;
+    for (i = 0; i < STEPS.length; i++) {
+      tk = ticksFor(x0, x1, STEPS[i]);
+      n = tk.length;
+      if (n < 3) continue;
+      gap = tickGapPx(pxInner, STEPS[i], x0, x1);
+      need = maxLabelPx(tk, STEPS[i]);
+      if (gap < need) continue;                                  // 會重疊 → 不採用
+      if (n >= 5 && n <= 8 && best === null) best = STEPS[i];     // 首選
+      if (fallback === null && n < 5) fallback = STEPS[i];        // 次選：第一個 <5 但不重疊的
+      if (n < 5 && Math.abs(n - 5) < bestDist) { bestDist = Math.abs(n - 5); fallback = STEPS[i]; }
+    }
+    if (best !== null) return best;
+    if (fallback !== null) return fallback;
+    return STEPS[STEPS.length - 1];
+  }
+
+  // 完整排版計劃：級距、所有刻度、以及實際要標的刻度（隔 labelEvery 個標一次）
+  function labelPlan(x0, x1, pxInner) {
+    var step = chooseStep(x0, x1, pxInner);
+    var ticks = ticksFor(x0, x1, step);
+    var need = maxLabelPx(ticks, step);
+    var gap = tickGapPx(pxInner, step, x0, x1);
+    var every = gap > 0 ? Math.max(1, Math.ceil(need / gap)) : 1;
+    var labeled = [];
+    for (var i = 0; i < ticks.length; i++) if (i % every === 0) labeled.push(ticks[i]);
+    return { step: step, ticks: ticks, labeled: labeled, every: every };
+  }
+
+  /* ---------- Y 軸 nice ticks（級距 1/2/2.5/5 × 10^n） ---------- */
+  function niceStep(raw) {
+    if (!(raw > 0)) return 1;
+    var exp = Math.floor(Math.log(raw) / Math.LN10);
+    var f = raw / Math.pow(10, exp);
+    var nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+    return nf * Math.pow(10, exp);
+  }
+  function niceScale(lo, hi, target, padFrac) {
+    if (padFrac === undefined) padFrac = 0.05;
+    if (target === undefined) target = 5;
+    if (!(hi > lo)) { var c = (hi + lo) / 2 || 0; lo = c - 1; hi = c + 1; }
+    var pad = (hi - lo) * padFrac;
+    lo -= pad; hi += pad;
+    var step = niceStep((hi - lo) / (target - 1));
+    var nlo = Math.floor(lo / step) * step, nhi = Math.ceil(hi / step) * step;
+    var ticks = [], v;
+    for (v = nlo; v <= nhi + step * 1e-9; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+    return { min: nlo, max: nhi, step: step, ticks: ticks };
+  }
+
+  /* ---------- 資料輔助 ---------- */
+  function segments(pts, gap) {                            // 相鄰兩筆間隔 > gap 就斷線
+    var segs = [], cur = [], i;
+    for (i = 0; i < pts.length; i++) {
+      if (cur.length && pts[i].t - cur[cur.length - 1].t > gap) { segs.push(cur); cur = []; }
+      cur.push(pts[i]);
+    }
+    if (cur.length) segs.push(cur);
+    return segs;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- 幾何 ---------- */
+  function pad(w) { return w >= 560 ? { l: 48, r: 50, t: 12, b: 28 } : { l: 46, r: 46, t: 12, b: 28 }; }
+  function height(w) { return w >= 560 ? 240 : 200; }
+  function bounds(vals) {
+    var lo = Infinity, hi = -Infinity;
+    for (var i = 0; i < vals.length; i++) {
+      var v = vals[i];
+      if (v === null || v === undefined || isNaN(v)) continue;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    return lo === Infinity ? [0, 1] : [lo, hi];
+  }
+
+  /* ---------- 主渲染 ---------- */
+  function render(win, depth) {
+    var host = document.querySelector('.chart[data-win="' + win.id + '"]');
+    if (!host) return;
+    var w = Math.max(240, Math.round(host.clientWidth || 320));
+    var h = height(w), pd = pad(w);
+    var iw = w - pd.l - pd.r, ih = h - pd.t - pd.b;
+
+    var now = Math.floor(Date.now() / 1000);
+    var x1 = now, x0 = now - win.span;
+
+    var real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
+                       .map(function (p) { return { t: p.t, v: p.v, raw: p.raw, o: p.o }; });
+    var est = DATA.est.filter(function (p) { return p.t >= x0 && p.t <= now; })
+                      .map(function (p) { return { t: p.t, v: p.v }; });
+
+    if (real.length < 2 && est.length < 2) {
+      host.innerHTML = '<p class="muted" style="font-size:12px;margin:6px 0">這個時間窗還沒有資料</p>';
+      return;
+    }
+
+    // Y 範圍：實測（含離群原始值）＋估算
+    var vals = real.map(function (p) { return p.v; }).concat(real.map(function (p) { return p.raw; }))
+                   .concat(est.map(function (p) { return p.v; }));
+    var yb = bounds(vals), ys = niceScale(yb[0], yb[1], 5, 0.05);
+    var y0 = ys.min, y1 = ys.max;
+
+    function X(t) { return pd.l + (t - x0) / (x1 - x0) * iw; }
+    function Y(v) { return pd.t + (y1 - v) / (y1 - y0) * ih; }
+
+    var plan = labelPlan(x0, x1, iw);
+    if (win.__everyW === w && win.__labelEvery && win.__labelEvery > plan.every) {   // DOM 實測後的修正值
+      plan.every = win.__labelEvery;
+      plan.labeled = plan.ticks.filter(function (_t, i) { return i % plan.every === 0; });
+    }
+    var step = plan.step;
+
+    var s = [];
+    s.push('<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" ' +
+           'font-family="-apple-system,PingFang TC,Microsoft JhengHei,sans-serif" role="img" ' +
+           'aria-label="' + esc(win.label + ' 走勢') + '">');
+
+    // 面積填色漸層（由線往下淡出到透明）
+    s.push('<defs><linearGradient id="g_' + win.id + '" gradientUnits="userSpaceOnUse" ' +
+           'x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '">' +
+           '<stop offset="0%" stop-color="' + win.color + '" stop-opacity="0.26"/>' +
+           '<stop offset="100%" stop-color="' + win.color + '" stop-opacity="0"/></linearGradient></defs>');
+
+    // 格線＋Y 標籤
+    ys.ticks.forEach(function (v) {
+      var yy = Y(v);
+      s.push('<line x1="' + pd.l + '" y1="' + yy.toFixed(1) + '" x2="' + (pd.l + iw) + '" y2="' + yy.toFixed(1) +
+             '" stroke="#2a3441" stroke-width="1"/>');
+      s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) + '" font-size="' + FONT +
+             '" fill="#7f8c9b" text-anchor="end">' + num(v) + '</text>');
+    });
+
+    // 面積填色：只涵蓋實測資料本身（第一筆→最後一筆），不從左緣起畫
+    if (real.length >= 2) {
+      segments(real, win.gapReal).forEach(function (seg) {
+        if (seg.length < 2) return;
+        var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
+        d += ' L' + X(seg[seg.length - 1].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) +
+             ' L' + X(seg[0].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) + ' Z';
+        s.push('<path d="' + d + '" fill="url(#g_' + win.id + ')" stroke="none"/>');
+      });
+    }
+
+    // 估算線（灰虛線，無填色）
+    segments(est, win.gapEst).forEach(function (seg) {
+      if (seg.length < 2) return;
+      var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
+      s.push('<path d="' + d + '" fill="none" stroke="#7f8c9b" stroke-width="' + LW_EST + '" ' +
+             'stroke-dasharray="5 4" opacity="0.8"/>');
+    });
+
+    // 實測線
+    segments(real, win.gapReal).forEach(function (seg) {
+      var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
+      s.push('<path d="' + d + '" fill="none" stroke="' + win.color + '" stroke-width="' + LW +
+             '" stroke-linejoin="round" stroke-linecap="round"/>');
+    });
+
+    // 離群點：空心小點（原始值位置）
+    real.forEach(function (p) {
+      if (!p.o) return;
+      s.push('<circle cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.raw).toFixed(1) + '" r="3.4" fill="none" ' +
+             'stroke="' + win.color + '" stroke-width="1.6"/>');
+    });
+
+    // X 標籤（台北整點／週一對齊）
+    // 對齊方式：一律置中（貼齊刻度）；只有置中文字會超出 SVG 邊界時才靠左／靠右。
+    // 註：不要「首尾一律靠邊」——第一個標籤整段往右伸會跟下一個標籤重疊。
+    plan.labeled.forEach(function (t) {
+      var txt = tickLabel(t, step), est = txt.length * CH_LABEL, cx = X(t);
+      var anchor = 'middle';
+      if (cx - est / 2 < 2) anchor = 'start';
+      else if (cx + est / 2 > w - 2) anchor = 'end';
+      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) + '" font-size="' + FONT +
+             '" fill="#7f8c9b" text-anchor="' + anchor + '">' + txt + '</text>');
+    });
+
+    // 最新值標籤：貼在右側 Y 軸上（整數）
+    var last = real.length ? real[real.length - 1] : null;
+    if (last) {
+      var ly = Y(last.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
+      ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
+      s.push('<rect x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw + '" height="' + bh +
+             '" rx="4" fill="' + win.color + '"/>');
+      s.push('<text x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) + '" font-size="' + FONT_BADGE +
+             '" font-weight="700" fill="#0f1419" text-anchor="middle">' + num(last.v) + '</text>');
+    }
+
+    s.push('</svg>');
+    host.innerHTML = s.join('');
+
+    CHARTS[win.id] = { host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih, x0: x0, x1: x1,
+                       y0: y0, y1: y1, X: X, Y: Y, real: real, est: est, step: step, plan: plan };
+
+    // 標籤量測保險：實際文字框若還重疊 → 隔一個標重畫（最多 3 輪）
+    if (fitLabels(win, CHARTS[win.id], depth || 0)) return;
+    if (window.DD373AfterRender) window.DD373AfterRender(win, CHARTS[win.id]);
+  }
+
+  function fitLabels(win, st, depth) {
+    var labels = st.host.querySelectorAll('text.xtick');
+    if (labels.length < 3 || !st.host.clientWidth) return false;      // 面板隱藏時量不到，切換頁籤時再量
+    var rects = [], i;
+    for (i = 0; i < labels.length; i++) rects.push(labels[i].getBoundingClientRect());
+    for (i = 1; i < rects.length; i++) {
+      if (rects[i].left < rects[i - 1].right + 2) {                   // 有重疊
+        if (depth >= 3) return false;
+        win.__labelEvery = (st.plan.every || 1) * 2;
+        win.__everyW = st.w;
+        render(win, depth + 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /* ---------- 載入 / 重繪 ---------- */
+  var DATA = null, CHARTS = {};
+  function renderAll() { WINCFG.forEach(function (win) { render(win, 0); }); }
+
+  function normalize(d) {                                 // 內嵌資料用精簡陣列
+    d.real = d.real.map(function (r) { return { t: r[0], v: r[1], raw: r[2] === undefined ? r[1] : r[2], o: !!r[3] }; });
+    d.est = d.est.map(function (r) { return { t: r[0], v: r[1] }; });
+    return d;
+  }
+
+  function boot() {
+    var el = document.getElementById('chart-data');
+    if (!el) return;
+    DATA = normalize(JSON.parse(el.textContent));
+    renderAll();
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () {
+        var seen = {};
+        WINCFG.forEach(function (win) {
+          var host = document.querySelector('.chart[data-win="' + win.id + '"]');
+          if (host && host.clientWidth) seen[win.id] = Math.round(host.clientWidth);
+        });
+        var changed = Object.keys(seen).some(function (k) { return CHARTS[k] && CHARTS[k].cw !== seen[k]; });
+        if (changed) renderAll();
+      });
+      WINCFG.forEach(function (win) {
+        var host = document.querySelector('.chart[data-win="' + win.id + '"]');
+        if (host) ro.observe(host);
+      });
+    } else {
+      window.addEventListener('resize', renderAll);
+    }
+    // 保險 1：視窗尺寸變化也重繪（ResizeObserver 在部分環境不一定會通知）
+    window.addEventListener('resize', function () { setTimeout(renderAll, 0); });
+    // 保險 2：切換時間窗時面板由 display:none 變可見 → 立即用正確寬度重繪
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=tr]'), function (r) {
+      r.addEventListener('change', function () { setTimeout(renderAll, 0); });
+    });
+  }
+
+  window.DD373TREND = { boot: boot, renderAll: renderAll, render: render, charts: CHARTS,
+                        // 供測試用
+                        ticksFor: ticksFor, chooseStep: chooseStep, labelPlan: labelPlan,
+                        maxLabelPx: maxLabelPx, tickGapPx: tickGapPx, mondayAnchorDay: mondayAnchorDay,
+                        niceScale: niceScale, niceStep: niceStep, tickLabel: tickLabel,
+                        fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS };
+
+  var WINCFG = window.DD373WINDOWS || [];
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();

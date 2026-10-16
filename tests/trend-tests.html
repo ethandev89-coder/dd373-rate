@@ -1,19 +1,61 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
-<head><meta charset="utf-8"><title>trend.js 單元測試（手動開，不發佈）</title>
+<head><meta charset="utf-8"><title>trend.js 測試（手動開，不發佈）</title>
 <style>body{font:13px/1.5 monospace;background:#111;color:#ddd;padding:14px}
-.ok{color:#2ecc71}.bad{color:#e74c3c}</style></head>
+.ok{color:#2ecc71}.bad{color:#e74c3c}h2{font-size:14px;color:#8ab4f8;margin:18px 0 6px}
+#harness{position:absolute;left:-9999px;top:0}</style></head>
 <body>
-<pre id="out">running…</pre>
+<h2>1) 純函式單元測試（刻度／nice ticks）</h2>
+<pre id="unit">running…</pre>
+<h2>2) 排版實測（真實 DOM 量測；323px 手機佈局的圖表寬度）</h2>
+<pre id="dom">running…</pre>
+
+<div id="harness"></div>
+<script type="application/json" id="chart-data"></script>
+<script>
+/* 測試用的圖表容器＋合成資料，必須在 trend.js 載入前就位。
+   寬度說明：手機 323px 時圖表容器寬 = 323 − 頁面左右 8×2? 依階段而異：
+     B 階段後（頁面左右 16、卡片內距 16）→ 259px；B 階段前（14/13）→ 269px；390px 手機 → 246px。 */
+(function () {
+  var WINS = [
+    { id: '24h', label: '24 小時', span: 86400, color: '#007AFF', gapReal: 1800, gapEst: 43200 },
+    { id: '48h', label: '48 小時', span: 172800, color: '#007AFF', gapReal: 1800, gapEst: 43200 },
+    { id: '7d', label: '7 天', span: 604800, color: '#007AFF', gapReal: 1800, gapEst: 43200 },
+    { id: '30d', label: '30 天', span: 2592000, color: '#007AFF', gapReal: 1800, gapEst: 43200 }
+  ];
+  var WIDTHS = [240, 259, 269, 306, 836];              // 240 = 極窄保險
+  var html = '', cfg = [];
+  WIDTHS.forEach(function (w) {
+    WINS.forEach(function (wn) {
+      var id = wn.id + '_w' + w;
+      html += '<div style="width:' + w + 'px"><div class="chart" data-win="' + id + '"></div></div>';
+      cfg.push({ id: id, label: wn.label, span: wn.span, color: wn.color,
+                 gapReal: wn.gapReal, gapEst: wn.gapEst, qaWidth: w, qaSpan: wn.id });
+    });
+  });
+  document.getElementById('harness').innerHTML = html;
+  window.DD373WINDOWS = cfg;
+  window.__QA = { widths: WIDTHS, ids: cfg };
+
+  // 合成資料：實測 3 天（每 15 分，含一筆離群突刺）＋估算 30 天（每 5 小時）
+  var now = Math.floor(Date.now() / 1000), real = [], est = [], t, v, i;
+  for (t = now - 3 * 86400; t <= now; t += 900) {
+    v = Math.round((900 + 40 * Math.sin((t - now) / 86400 * 6.28) + 3 * Math.sin(t / 3600)) * 10) / 10;
+    real.push([t, v, v, 0]);
+  }
+  var spike = now - 30 * 3600;
+  for (i = 0; i < real.length; i++) {
+    if (real[i][0] === spike) { real[i] = [spike, 800, 800, 1]; }
+  }
+  for (t = now - 30 * 86400; t < now - 3 * 86400; t += 5 * 3600) {
+    est.push([t, Math.round((1500 - (t - (now - 30 * 86400)) / 86400 * 18) * 10) / 10]);
+  }
+  document.getElementById('chart-data').textContent = JSON.stringify({ now: now, real: real, est: est });
+})();
+</script>
 <script src="../static/trend.js"></script>
 <script>
-/* trend.js 的刻度／nice ticks 函式單元測試
-   驗收重點：
-     - X 刻度級距從 [1h,3h,6h,12h,1d,2d,7d] 挑「刻度數 5~8」者，且對齊台北時間
-     - 7d 範圍必須產出 10/10~10/16 每天 00:00
-     - Y nice ticks 級距 ∈ 1/2/2.5/5 × 10^n、上下留 5% padding */
 var T = window.DD373TREND, log = [], pass = 0, fail = 0;
-
 function ok(name, cond, got) {
   (cond ? pass++ : fail++);
   log.push('<span class="' + (cond ? 'ok' : 'bad') + '">' + (cond ? 'PASS' : 'FAIL') + '</span> ' + name
@@ -22,70 +64,118 @@ function ok(name, cond, got) {
 function eq(name, a, b) { ok(name, JSON.stringify(a) === JSON.stringify(b), a); }
 function tp(s) { return Math.floor(new Date(s.replace(' ', 'T') + '+08:00').getTime() / 1000); }
 function taipeiHM(t) { return T.fmtFull(t).slice(-5); }
+function wd(t) { return new Date((t + 28800) * 1000).getUTCDay(); }        // 0=日、1=一
 function allMidnight(ticks) { return ticks.every(function (t) { return taipeiHM(t) === '00:00'; }); }
 function allAligned(ticks, step) { return ticks.every(function (t) { return ((t + 28800) % step) === 0; }); }
+function overlapInfo(x0, x1, inner) {
+  var step = T.chooseStep(x0, x1, inner), plan = T.labelPlan(x0, x1, inner);
+  var need = T.maxLabelPx(plan.ticks, step), gap = T.tickGapPx(inner, step, x0, x1);
+  return { step: step, n: plan.ticks.length, labeled: plan.labeled.length,
+           gap: +gap.toFixed(1), need: +need.toFixed(1), ok: gap >= need || plan.every > 1 };
+}
 
 var NOW = tp('2026-10-16 23:13');           // 基準「現在」＝台北 2026-10-16 23:13
+var W = { '24h': 86400, '48h': 172800, '7d': 604800, '30d': 2592000 };
+var X0 = {};
+Object.keys(W).forEach(function (k) { X0[k] = NOW - W[k]; });
+var INNER_DESKTOP = 836, INNER_390 = 246, INNER_323 = 177;
 
-log.push('== X 刻度級距／對齊 ==');
-var t24 = { x0: NOW - 86400, x1: NOW }, t48 = { x0: NOW - 172800, x1: NOW },
-    t7d = { x0: NOW - 604800, x1: NOW }, t30d = { x0: NOW - 2592000, x1: NOW };
-var c24 = T.chooseStep(t24.x0, t24.x1, 340), c48 = T.chooseStep(t48.x0, t48.x1, 340),
-    c7d = T.chooseStep(t7d.x0, t7d.x1, 340), c30d = T.chooseStep(t30d.x0, t30d.x1, 340);
-var k24 = T.ticksFor(t24.x0, t24.x1, c24), k48 = T.ticksFor(t48.x0, t48.x1, c48),
-    k7 = T.ticksFor(t7d.x0, t7d.x1, c7d), k30 = T.ticksFor(t30d.x0, t30d.x1, c30d);
+log.push('== X 刻度：級距選擇／對齊（台北時間） ==');
+var s24 = T.chooseStep(X0['24h'], NOW, INNER_DESKTOP);
+eq('桌機 24h 級距＝3h、8 個刻度', [s24, T.ticksFor(X0['24h'], NOW, s24).length], [10800, 8]);
+ok('24h 全部對齊整點 (t+8h)%step==0', allAligned(T.ticksFor(X0['24h'], NOW, s24), s24),
+   T.ticksFor(X0['24h'], NOW, s24).map(taipeiHM));
 
-eq('24h 窗級距＝3h', c24, 10800);
-eq('24h 刻度數（5~8）', k24.length, 8);
-ok('24h 全部對齊整點 (t+8h)%step==0', allAligned(k24, c24), k24.map(taipeiHM));
-eq('24h 首／末刻度', [taipeiHM(k24[0]), taipeiHM(k24[k24.length - 1])], ['00:00', '21:00']);
+var s48 = T.chooseStep(X0['48h'], NOW, INNER_DESKTOP);
+eq('桌機 48h 級距＝6h、8 個刻度', [s48, T.ticksFor(X0['48h'], NOW, s48).length], [21600, 8]);
 
-eq('48h 窗級距＝6h', c48, 21600);
-eq('48h 刻度數（5~8）', k48.length, 8);
-ok('48h 全部對齊整點', allAligned(k48, c48), k48.map(taipeiHM));
-
-eq('7d 窗級距＝1d', c7d, 86400);
-eq('7d 刻度數（5~8）', k7.length, 7);
-eq('7d 刻度日期＝10/10~10/16 每天 00:00',
-   k7.map(function (t) { return T.fmtFull(t); }),
+var s7 = T.chooseStep(X0['7d'], NOW, INNER_DESKTOP);
+eq('桌機 7d 級距＝1d、7 個刻度', [s7, T.ticksFor(X0['7d'], NOW, s7).length], [86400, 7]);
+eq('桌機 7d 刻度＝10/10~10/16 每天 00:00',
+   T.ticksFor(X0['7d'], NOW, s7).map(function (t) { return T.fmtFull(t); }),
    ['10/10 00:00', '10/11 00:00', '10/12 00:00', '10/13 00:00', '10/14 00:00', '10/15 00:00', '10/16 00:00']);
-ok('7d 每個刻度都是台北 00:00', allMidnight(k7), k7.map(taipeiHM));
 
-eq('30d 窗級距＝7d（2d 會擠到 15 個刻度）', c30d, 604800);
-eq('30d 刻度數（5~8）', k30.length, 5);
-ok('30d 每個刻度都是台北 00:00', allMidnight(k30), k30.map(function (t) { return T.fmtFull(t); }));
-eq('30d 刻度日期', k30.map(function (t) { return T.fmtFull(t); }),
-   ['09/17 00:00', '09/24 00:00', '10/01 00:00', '10/08 00:00', '10/15 00:00']);
-
-eq('刻度標籤：整日顯示 M/D', T.tickLabel(k7[1], 86400), '10/11');
-eq('刻度標籤：24h 窗整點顯示 HH:MM（非日界）', T.tickLabel(tp('2026-10-16 03:00'), 10800), '03:00');
-eq('刻度標籤：24h 窗跨日顯示 M/D', T.tickLabel(tp('2026-10-16 00:00'), 10800), '10/16');
+var s30 = T.chooseStep(X0['30d'], NOW, INNER_DESKTOP);
+eq('桌機 30d 級距＝7d（不被 2d 的 16 個標籤綁走）', s30, 604800);
+var k30 = T.ticksFor(X0['30d'], NOW, s30);
+ok('30d 每個刻度都是台北時間週一 00:00（A3）',
+   k30.every(function (t) { return wd(t) === 1 && taipeiHM(t) === '00:00'; }),
+   k30.map(function (t) { return T.fmtFull(t) + ' 週' + wd(t); }));
+eq('30d 刻度日期（週一）', k30.map(function (t) { return T.fmtFull(t).slice(0, 5); }),
+   ['09/21', '09/28', '10/05', '10/12']);
 
 log.push('');
-log.push('== Y 軸 nice ticks（1/2/2.5/5 × 10^n、上下 5% padding）==');
+log.push('== A1：窄螢幕不重疊（323px→容器 177px 內距；390px→246px） ==');
+[[INNER_323, '323px'], [INNER_390, '390px']].forEach(function (pair) {
+  Object.keys(W).forEach(function (win) {
+    var r = overlapInfo(X0[win], NOW, pair[0]);
+    ok(pair[1] + ' 窗 ' + win + '：級距 ' + (r.step / 3600) + 'h、間距 ' + r.gap + 'px ≥ 需要 ' + r.need +
+       'px、標籤 ' + r.labeled + ' 個', r.ok && r.labeled >= 3, r);
+  });
+});
+
+log.push('');
+log.push('== 文字／數字格式 ==');
+eq('刻度標籤：日以上 → M/D', T.tickLabel(tp('2026-10-11 00:00'), 86400), '10/11');
+eq('刻度標籤：整點 → HH:MM', T.tickLabel(tp('2026-10-16 03:00'), 10800), '03:00');
+eq('刻度標籤：整點跨日 → M/D', T.tickLabel(tp('2026-10-16 00:00'), 10800), '10/16');
+eq('數字四捨五入＋千分位（A2）', [T.num(945.5), T.num(863.0), T.num(1716.4)], ['946', '863', '1,716']);
+
+log.push('');
+log.push('== Y 軸 nice ticks（1/2/2.5/5 × 10^n、上下 5% padding） ==');
 var s1 = T.niceScale(863, 951, 5, 0.05);
-eq('niceScale(863,951) step', s1.step, 25);
-eq('niceScale(863,951) 範圍與刻度', [s1.min, s1.max, s1.ticks], [850, 975, [850, 875, 900, 925, 950, 975]]);
-ok('niceScale(863,951) 上下各留 ≥5% padding', s1.min <= 863 - (951 - 863) * 0.05 && s1.max >= 951 + (951 - 863) * 0.05,
-   [s1.min, s1.max]);
-
+eq('niceScale(863,951) step／刻度', [s1.step, s1.ticks], [25, [850, 875, 900, 925, 950, 975]]);
+ok('niceScale(863,951) 上下各留 >=5% padding',
+   s1.min <= 863 - 88 * 0.05 && s1.max >= 951 + 88 * 0.05, [s1.min, s1.max]);
 var s2 = T.niceScale(900, 910, 5, 0.05);
-eq('niceScale(900,910) step=5、刻度 895~915', [s2.step, s2.ticks], [5, [895, 900, 905, 910, 915]]);
-
+eq('niceScale(900,910)', [s2.step, s2.ticks], [5, [895, 900, 905, 910, 915]]);
 var s3 = T.niceScale(1400, 1700, 5, 0.05);
-eq('niceScale(1400,1700) step=100、刻度 1300~1800', [s3.step, s3.ticks], [100, [1300, 1400, 1500, 1600, 1700, 1800]]);
+eq('niceScale(1400,1700)', [s3.step, s3.ticks], [100, [1300, 1400, 1500, 1600, 1700, 1800]]);
+eq('niceStep 級距 ∈ 1/2/2.5/5×10^n', [0.2, 1.1, 3.3, 24.2, 82.5].map(T.niceStep), [0.2, 2, 5, 25, 100]);
+eq('niceStep(2.4) → 2.5', T.niceStep(2.4), 2.5);
 
-var s4 = T.niceScale(944.9, 945.1, 5, 0.05);
-ok('niceScale 極窄範圍不炸（step 仍屬 1/2/2.5/5×10^n）',
-   [1, 2, 2.5, 5].indexOf(s4.step / Math.pow(10, Math.floor(Math.log(s4.step) / Math.LN10))) >= 0
-   && s4.ticks.length >= 3, [s4.step, s4.ticks]);
+document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
+  (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';
 
-var steps = [0.2, 1.1, 3.3, 24.2, 82.5].map(T.niceStep);
-eq('niceStep 級距檢查', steps, [0.2, 2, 5, 25, 100]);
-
-log.push('');
-log.push('<b>' + (fail === 0 ? '✅ 全部通過' : '❌ 有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>');
-document.getElementById('out').innerHTML = log.join('\n');
+/* ---------- 2) 真實 DOM 量測：相鄰標籤不重疊 ----------
+   注意：boot() 綁在 DOMContentLoaded，所以在 load 之後才量（否則圖還沒畫）。 */
+window.addEventListener('load', function () {
+var dlog = [], dpass = 0, dfail = 0;
+function dok(name, cond, got) {
+  (cond ? dpass++ : dfail++);
+  dlog.push('<span class="' + (cond ? 'ok' : 'bad') + '">' + (cond ? 'PASS' : 'FAIL') + '</span> ' + name
+            + '   got=' + JSON.stringify(got));
+}
+window.__QA.ids.forEach(function (c) {
+  var host = document.querySelector('.chart[data-win="' + c.id + '"]');
+  var svg = host.querySelector('svg');
+  if (!svg) { dok(c.qaSpan + '@' + c.qaWidth + 'px 有畫出 SVG', false, null); return; }
+  var labels = [].slice.call(svg.querySelectorAll('text.xtick'));
+  var rects = labels.map(function (t) { return t.getBoundingClientRect(); });
+  var worst = Infinity;
+  for (var i = 1; i < rects.length; i++) worst = Math.min(worst, rects[i].left - rects[i - 1].right);
+  dok(c.qaSpan + '@' + c.qaWidth + 'px：標籤 ' + labels.length + ' 個、最小間距 ' +
+      (worst === Infinity ? 'n/a' : worst.toFixed(1) + 'px'),
+      labels.length >= (c.qaWidth >= 259 ? 3 : 2) && worst >= 1.5, worst);
+  if (c.qaSpan === '24h' && c.qaWidth === 836) {
+    var badge = [].slice.call(svg.querySelectorAll('text')).filter(function (t) {
+      return t.getAttribute('font-weight') === '700';
+    })[0];
+    dok('最新值標籤是整數（無小數點）', !!badge && badge.textContent.indexOf('.') < 0, badge && badge.textContent);
+  }
+  if (c.qaSpan === '7d' && c.qaWidth === 836) {
+    var area = svg.querySelector('path[fill^="url"]');
+    var first = st => 0;
+    var st = T.charts[c.id];
+    var m = area ? /^M([\d.]+),/.exec(area.getAttribute('d')) : null;
+    dok('7d 面積填色起點＝第一筆實測（不是左緣）',
+        !!m && Math.abs(+m[1] - st.X(st.real[0].t)) < 1.5 && +m[1] > st.pd.l + 20,
+        { areaStartX: m && +m[1], firstRealX: st.real.length ? +st.X(st.real[0].t).toFixed(1) : null, plotLeft: st.pd.l });
+  }
+});
+document.getElementById('dom').innerHTML = dlog.join('\n') + '\n<b>' +
+  (dfail === 0 ? '✅ 排版實測全部通過' : '❌ 排版實測有失敗') + '：' + dpass + ' passed, ' + dfail + ' failed</b>';
+});
 </script>
 </body>
 </html>
