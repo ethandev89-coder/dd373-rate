@@ -350,8 +350,6 @@ def build(d, prev):
     fx = d["fx"]
     ok = [s for s in d["servers"] if s.get("vw2_gold_per_twd")]
     by_vw = sorted(ok, key=lambda s: -s["vw2_gold_per_twd"])
-    by_sell = sorted([s for s in ok if s.get("sell_gold_per_twd")],
-                     key=lambda s: s["sell_gold_per_twd"])
     thin = sorted(ok, key=lambda s: s["stock_wj"])[:3]
     deep = sorted(ok, key=lambda s: -s["stock_wj"])[:3]
 
@@ -406,7 +404,6 @@ def build(d, prev):
             f' ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
             f' ・ 買 5,000 萬天幣 ≈ NT${nt5000(srv):,}</div></div>')
 
-    by_sell = sorted([x for x in ok if x.get("sell_gold_per_twd")], key=lambda x: x["sell_gold_per_twd"])
 
     s_now = load_vw2_series(24, "vw2_gold_per_twd")     # ② 買滿 5,000 萬天幣加權（15 分輕掃 + 每小時全服）
     all_vw2 = load_vw2_series(24 * 31, "vw2_gold_per_twd")
@@ -545,7 +542,7 @@ def build(d, prev):
         hero_block = f"""
 <section class="card lg hero">
   <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>天幣/元</span></div>
-  <p class="hero-nt">買 5,000 萬天幣 ≈ <b>NT${nt5000(me):,}</b></p>
+  <p class="hero-nt">DD373 參考：5,000 萬天幣 ≈ <b>NT${nt5000(me):,}</b></p>
   <p class="hero-l">1 台幣買 {me['vw2_gold_per_twd']:,.0f} 天幣 · {chg_line}</p>
   <div class="hero-3">
     <div><label data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
