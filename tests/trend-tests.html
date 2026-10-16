@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="utf-8"><title>trend.js 單元測試（手動開，不發佈）</title>
+<style>body{font:13px/1.5 monospace;background:#111;color:#ddd;padding:14px}
+.ok{color:#2ecc71}.bad{color:#e74c3c}</style></head>
+<body>
+<pre id="out">running…</pre>
+<script src="../static/trend.js"></script>
+<script>
+/* trend.js 的刻度／nice ticks 函式單元測試
+   驗收重點：
+     - X 刻度級距從 [1h,3h,6h,12h,1d,2d,7d] 挑「刻度數 5~8」者，且對齊台北時間
+     - 7d 範圍必須產出 10/10~10/16 每天 00:00
+     - Y nice ticks 級距 ∈ 1/2/2.5/5 × 10^n、上下留 5% padding */
+var T = window.DD373TREND, log = [], pass = 0, fail = 0;
+
+function ok(name, cond, got) {
+  (cond ? pass++ : fail++);
+  log.push('<span class="' + (cond ? 'ok' : 'bad') + '">' + (cond ? 'PASS' : 'FAIL') + '</span> ' + name
+           + '   got=' + JSON.stringify(got));
+}
+function eq(name, a, b) { ok(name, JSON.stringify(a) === JSON.stringify(b), a); }
+function tp(s) { return Math.floor(new Date(s.replace(' ', 'T') + '+08:00').getTime() / 1000); }
+function taipeiHM(t) { return T.fmtFull(t).slice(-5); }
+function allMidnight(ticks) { return ticks.every(function (t) { return taipeiHM(t) === '00:00'; }); }
+function allAligned(ticks, step) { return ticks.every(function (t) { return ((t + 28800) % step) === 0; }); }
+
+var NOW = tp('2026-10-16 23:13');           // 基準「現在」＝台北 2026-10-16 23:13
+
+log.push('== X 刻度級距／對齊 ==');
+var t24 = { x0: NOW - 86400, x1: NOW }, t48 = { x0: NOW - 172800, x1: NOW },
+    t7d = { x0: NOW - 604800, x1: NOW }, t30d = { x0: NOW - 2592000, x1: NOW };
+var c24 = T.chooseStep(t24.x0, t24.x1, 340), c48 = T.chooseStep(t48.x0, t48.x1, 340),
+    c7d = T.chooseStep(t7d.x0, t7d.x1, 340), c30d = T.chooseStep(t30d.x0, t30d.x1, 340);
+var k24 = T.ticksFor(t24.x0, t24.x1, c24), k48 = T.ticksFor(t48.x0, t48.x1, c48),
+    k7 = T.ticksFor(t7d.x0, t7d.x1, c7d), k30 = T.ticksFor(t30d.x0, t30d.x1, c30d);
+
+eq('24h 窗級距＝3h', c24, 10800);
+eq('24h 刻度數（5~8）', k24.length, 8);
+ok('24h 全部對齊整點 (t+8h)%step==0', allAligned(k24, c24), k24.map(taipeiHM));
+eq('24h 首／末刻度', [taipeiHM(k24[0]), taipeiHM(k24[k24.length - 1])], ['00:00', '21:00']);
+
+eq('48h 窗級距＝6h', c48, 21600);
+eq('48h 刻度數（5~8）', k48.length, 8);
+ok('48h 全部對齊整點', allAligned(k48, c48), k48.map(taipeiHM));
+
+eq('7d 窗級距＝1d', c7d, 86400);
+eq('7d 刻度數（5~8）', k7.length, 7);
+eq('7d 刻度日期＝10/10~10/16 每天 00:00',
+   k7.map(function (t) { return T.fmtFull(t); }),
+   ['10/10 00:00', '10/11 00:00', '10/12 00:00', '10/13 00:00', '10/14 00:00', '10/15 00:00', '10/16 00:00']);
+ok('7d 每個刻度都是台北 00:00', allMidnight(k7), k7.map(taipeiHM));
+
+eq('30d 窗級距＝7d（2d 會擠到 15 個刻度）', c30d, 604800);
+eq('30d 刻度數（5~8）', k30.length, 5);
+ok('30d 每個刻度都是台北 00:00', allMidnight(k30), k30.map(function (t) { return T.fmtFull(t); }));
+eq('30d 刻度日期', k30.map(function (t) { return T.fmtFull(t); }),
+   ['09/17 00:00', '09/24 00:00', '10/01 00:00', '10/08 00:00', '10/15 00:00']);
+
+eq('刻度標籤：整日顯示 M/D', T.tickLabel(k7[1], 86400), '10/11');
+eq('刻度標籤：24h 窗整點顯示 HH:MM（非日界）', T.tickLabel(tp('2026-10-16 03:00'), 10800), '03:00');
+eq('刻度標籤：24h 窗跨日顯示 M/D', T.tickLabel(tp('2026-10-16 00:00'), 10800), '10/16');
+
+log.push('');
+log.push('== Y 軸 nice ticks（1/2/2.5/5 × 10^n、上下 5% padding）==');
+var s1 = T.niceScale(863, 951, 5, 0.05);
+eq('niceScale(863,951) step', s1.step, 25);
+eq('niceScale(863,951) 範圍與刻度', [s1.min, s1.max, s1.ticks], [850, 975, [850, 875, 900, 925, 950, 975]]);
+ok('niceScale(863,951) 上下各留 ≥5% padding', s1.min <= 863 - (951 - 863) * 0.05 && s1.max >= 951 + (951 - 863) * 0.05,
+   [s1.min, s1.max]);
+
+var s2 = T.niceScale(900, 910, 5, 0.05);
+eq('niceScale(900,910) step=5、刻度 895~915', [s2.step, s2.ticks], [5, [895, 900, 905, 910, 915]]);
+
+var s3 = T.niceScale(1400, 1700, 5, 0.05);
+eq('niceScale(1400,1700) step=100、刻度 1300~1800', [s3.step, s3.ticks], [100, [1300, 1400, 1500, 1600, 1700, 1800]]);
+
+var s4 = T.niceScale(944.9, 945.1, 5, 0.05);
+ok('niceScale 極窄範圍不炸（step 仍屬 1/2/2.5/5×10^n）',
+   [1, 2, 2.5, 5].indexOf(s4.step / Math.pow(10, Math.floor(Math.log(s4.step) / Math.LN10))) >= 0
+   && s4.ticks.length >= 3, [s4.step, s4.ticks]);
+
+var steps = [0.2, 1.1, 3.3, 24.2, 82.5].map(T.niceStep);
+eq('niceStep 級距檢查', steps, [0.2, 2, 5, 25, 100]);
+
+log.push('');
+log.push('<b>' + (fail === 0 ? '✅ 全部通過' : '❌ 有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>');
+document.getElementById('out').innerHTML = log.join('\n');
+</script>
+</body>
+</html>
