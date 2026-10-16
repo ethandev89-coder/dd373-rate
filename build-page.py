@@ -542,7 +542,7 @@ def build(d, prev):
         hero_block = f"""
 <section class="card lg hero">
   <div class="hero-n"><b>{me['vw2_gold_per_twd']:,.0f}</b><span>天幣/元</span></div>
-  <p class="hero-l">等於 1:{me['vw2_gold_per_twd']:,.0f} · {chg_line}</p>
+  <p class="hero-l">{chg_line}</p>
   <div class="hero-3">
     <div><label data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</label><b>{me['low_gold_per_twd']:,.0f}</b></div>
     <div><label>掛單（天幣）</label><b>{me['stock_wj'] / 10000:.2f} 億</b> {thin_tag}</div>
