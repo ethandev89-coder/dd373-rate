@@ -48,3 +48,29 @@ bash publish.sh                  # 產頁 + 發佈到 GitHub Pages
 ```
 
 純腳本產頁，0 token。
+
+## 改版（蘋果風）與退回方式
+
+2026-10-17 改版：整頁改成蘋果風（CSS 變數＋深淺色）、走勢圖改手刻 SVG 渲染器（`static/trend.js`）、
+加了 `static/page.js`（時間會動／5 分鐘檢查更新／記住時間軸）與 `static/apple.css`（設計系統）。
+**單一產線**：`build-page.py` 同時負責正式版與預覽版。
+
+```
+python3 build-page.py            正式版 → docs/index.html + docs/version.json + data/page-data.json
+python3 build-page.py --light    不重掃，套用最新 15 分鐘輕掃的飛馬數字（15 分鐘的 cron 用）
+python3 build-page.py --preview  預覽版 → docs/preview.html（noindex＋橫幅＋前端測試參數、對 data/ 唯讀）
+./publish.sh [--light] [--no-jitter]   重建（拿 data/.publish.lock）→ commit → push
+DD373_FAKE_AGE_MIN=70 python3 build-page.py --light   測試用：假裝資料是 70 分鐘前（驗「已停更」橫幅）
+```
+
+預覽版專用前端參數（正式版沒有 `DD373_PREVIEW` 旗標，加了也不生效）：
+`?now=2026-10-17T04:00`（假造現在時間）、`?poll=15`（把 5 分鐘檢查改成 15 秒）。
+
+### 退回改版前（一行）
+
+```bash
+cd ~/.hermes/dd373-page && git checkout pre-apple -- build-page.py static/trend.js && git commit -m "rollback to pre-apple" && ./publish.sh --light --no-jitter
+```
+
+標籤 `pre-apple` = 改版前的正式版（舊 build-page.py ＋ 舊 static/trend.js）。
+`build-page.py --preview` 與 `static/page.js` 留在新版是刻意的（預覽產線與行為層都還要），退回後不受影響。

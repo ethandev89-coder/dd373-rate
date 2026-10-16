@@ -3,121 +3,347 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#12181f">
-<title>天堂經典版 天幣幣值（DD373 全服）</title>
+
+<title>飛馬珀伽索斯 天幣幣值（DD373）</title>
 <style>
-:root{--bg:#0f1419;--card:#161d26;--card2:#1b2330;--line:#263040;--fg:#e8edf3;--muted:#8a97a6;--red:#e74c3c;--green:#2ecc71;--gold:#f1c40f}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.55 -apple-system,"PingFang TC","Hiragino Sans GB","Microsoft JhengHei",sans-serif;padding:14px max(12px,env(safe-area-inset-left)) 40px}
-header{margin:4px 0 14px}
-h1{font-size:19px;margin:0 0 4px}
-h2{font-size:15px;margin:0 0 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;justify-content:space-between}
-h2 span{font-size:11px;color:var(--muted);font-weight:400}
-h3{font-size:12.5px;margin:0 0 6px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px;margin:0 0 12px}
-.card.accent{background:linear-gradient(180deg,#1b2430,#161d26);border-color:#33415a}
-.sub{color:var(--muted);font-size:12px}
-.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 0 10px}
-.kpi{background:var(--card2);border-radius:9px;padding:9px 10px}
-.kpi label{display:block;font-size:11px;color:var(--muted)}
-.kpi b{font-size:19px;display:block;line-height:1.25}
-.kpi i{font-size:11px;color:var(--muted);font-style:normal}
-.notes div{font-size:12.5px;color:#c6d0da;margin:3px 0}
-.up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--muted)}
-.pri{color:var(--gold) !important;font-weight:700}
-td.pri{background:rgba(241,196,15,.12);box-shadow:inset 1px 0 0 rgba(241,196,15,.35),inset -1px 0 0 rgba(241,196,15,.35)}
-th.pri{color:var(--gold) !important;background:#20293a}
-.mob{display:block}
-.full{display:none}
-.mrow{padding:7px 2px;border-bottom:1px solid var(--line)}
-.mrow.me{background:#20304a;border-radius:6px;padding:7px 7px}
-.mline1{display:flex;align-items:baseline;gap:6px}
-.mline1 .rk{color:var(--muted);font-size:11px;width:16px;flex:none}
-.mline1 .nm{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mline1 .nm.me{font-weight:700}
-.mline1 .vw{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;flex:none}
-.mline1 .dl{font-size:11px;text-align:right;font-variant-numeric:tabular-nums;flex:none;min-width:58px}
-.mline2{font-size:11px;color:#9aa7b6;margin-top:1px}
-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th{font-size:11px;color:var(--muted);font-weight:500;position:sticky;top:0;background:var(--card)}
-td.nm,th.nm{text-align:left;font-size:12.5px}
-td.rk{color:var(--muted);font-size:11px;width:20px}
-td.num{font-size:12.5px}
-td.sm{font-size:11px;color:#b7c2ce}
-td.hi{font-weight:700}
-tr.me{background:#20304a}
-tr.me td.nm{font-weight:700}
-.tag{background:#2ecc71;color:#04121f;border-radius:4px;font-size:10px;padding:1px 4px;vertical-align:1px}
-.legend{font-size:11px;color:var(--muted);margin:4px 0 8px}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
-.dot.red{background:var(--red)}
-.dot.orange{background:#e67e22}
-.dot.burnt{background:#d35400}
-.tabs input{display:none}
-.tabbar{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 10px}
-.tabbar label{font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);cursor:pointer}
-#tr24:checked ~ .tabbar label[for=tr24],#tr48:checked ~ .tabbar label[for=tr48],#tr7:checked ~ .tabbar label[for=tr7],#tr30:checked ~ .tabbar label[for=tr30]{background:#2b3b52;color:#fff;border-color:#4a5f80}
-.panels > .panel{display:none}
-#tr24:checked ~ .panels .p24,#tr48:checked ~ .panels .p48,#tr7:checked ~ .panels .p7,#tr30:checked ~ .panels .p30{display:block}
-.chart{margin:6px 0 2px;width:100%;position:relative}
-.chart svg{display:block}
-.movers{margin:0;padding-left:18px;font-size:12.5px}
-.movers li{margin:2px 0}
-.split{display:grid;grid-template-columns:1fr;gap:10px}
-.muted{color:var(--muted)}
-footer{color:var(--muted);font-size:11px;margin-top:14px;line-height:1.7}
-a{color:#6ab0ff}
-@media(min-width:560px){.kpis{grid-template-columns:repeat(4,1fr)}.split{grid-template-columns:1fr 1fr}}
-@media(min-width:700px){.mob{display:none}.full{display:block}}
+/* ============================================================================
+   天幣幣值頁 — 蘋果風設計系統（B 階段）
+   規則：
+     - 所有顏色只寫在 :root（淺色）與 @media (prefers-color-scheme: dark) 兩處，
+       其他地方一律用 var(--xxx)，不得出現寫死的色碼。
+     - 圖表是 JS 畫的 SVG，元素只掛 class，顏色／線寬／字級全部由這張表決定
+       ⇒ 深淺色切換時 CSS 變數自己會變，圖表不用重讀顏色也會跟著變。
+     - 字體不載入外部字型（單檔、無外部依賴）；數字用 tabular-nums 對齊。
+     - 圓角 12（主卡 16）、不用陰影、不用漸層（圖表面積淡出除外）；
+       間距只用 4／8／12／16／24／32；頁面左右 16；桌機內容最寬 960 置中。
+   ========================================================================== */
+:root {
+  color-scheme: light dark;
+  --bg: #F2F2F7;
+  --card: #FFFFFF;
+  --card-2: #F2F2F7;
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, .6);
+  --label-3: rgba(60, 60, 67, .3);
+  --sep: rgba(60, 60, 67, .29);
+  --fill: rgba(118, 118, 128, .12);
+  --accent: #007AFF;
+  --gray: #8E8E93;
+  --ok: #34C759;
+  --warn: #FF9500;
+  --bad: #FF3B30;
+  --on-accent: #FFFFFF;          /* 主色底上的文字（徽章、膠囊） */
+  --seg-sel: #FFFFFF;            /* 分段控制「選中」的小方塊 */
+  --warn-soft: rgba(255, 149, 0, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1C1C1E;
+    --card-2: #2C2C2E;
+    --label: #FFFFFF;
+    --label-2: rgba(235, 235, 245, .6);
+    --label-3: rgba(235, 235, 245, .3);
+    --sep: rgba(84, 84, 88, .6);
+    --fill: rgba(118, 118, 128, .24);
+    --accent: #0A84FF;
+    --gray: #8E8E93;
+    --ok: #30D158;
+    --warn: #FF9F0A;
+    --bad: #FF453A;
+    --seg-sel: #636366;
+    --warn-soft: rgba(255, 159, 10, .16);
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  padding: 16px 16px 32px;
+  background: var(--bg);
+  color: var(--label);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC",
+        "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 1024px) { body { max-width: 960px; margin: 0 auto; padding-bottom: 32px; } }
+
+a { color: var(--accent); text-decoration: none; }
+
+/* ---------- 預覽版橫幅 ---------- */
+.preview-banner {
+  margin: -16px -16px 16px;
+  padding: 8px 16px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 13px;
+  text-align: center;
+}
+.preview-banner a { color: var(--warn); text-decoration: underline; }
+
+/* ---------- 標題 ---------- */
+header { margin: 0 0 16px; }
+h1 { font-size: 28px; font-weight: 700; letter-spacing: -.4px; margin: 0 0 4px; }
+.sub { color: var(--label-2); font-size: 14px; }
+h2 {
+  font-size: 20px; font-weight: 600; margin: 0 0 12px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between;
+}
+h2 span { font-size: 13px; font-weight: 400; color: var(--label-2); }
+h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 16px;
+}
+.card.accent, .card.lg { border-radius: 16px; }
+.notes div { font-size: 13px; color: var(--label-2); margin: 4px 0; }
+.muted { color: var(--label-2); }
+
+/* ---------- 狀態膠囊／Tag ---------- */
+.capsule {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--fill); border-radius: 999px; padding: 4px 12px;
+  font-size: 13px; color: var(--label-2);
+}
+.capsule .d { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.capsule.warn { color: var(--warn); }
+.capsule.warn .d { background: var(--warn); }
+.capsule.bad { color: var(--bad); }
+.capsule.bad .d { background: var(--bad); }
+.tag {
+  display: inline-block; font-size: 12px; color: var(--warn);
+  background: var(--warn-soft); border-radius: 6px; padding: 2px 8px;
+}
+
+/* ---------- KPI 格（C 階段會換成 Hero 卡） ---------- */
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 4px 0 12px; }
+.kpi { background: var(--card-2); border-radius: 12px; padding: 12px; }
+.kpi label { display: block; font-size: 12px; color: var(--label-2); }
+.kpi b { display: block; font-size: 24px; font-weight: 600; line-height: 1.25; }
+.kpi i { font-size: 13px; font-style: normal; color: var(--label-2); }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+.pri { color: var(--accent); font-weight: 600; }
+td.pri, th.pri { color: var(--accent); }
+td.pri { background: var(--fill); }
+
+/* 漲跌不用紅綠（台灣紅＝漲，容易看反）：只用次要文字色＋▲▼ 與文字說明 */
+.up, .down { color: var(--label-2); }
+.flat { color: var(--label-3); }
+
+/* ---------- 全服排行（C 階段改成群組列表；此處先套色票） ---------- */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; border-bottom: .5px solid var(--sep); text-align: right; white-space: nowrap; }
+th { font-size: 12px; font-weight: 500; color: var(--label-2); position: sticky; top: 0; background: var(--card); }
+td.nm, th.nm { text-align: left; font-size: 14px; color: var(--label); }
+td.rk { color: var(--label-3); font-size: 12px; width: 20px; }
+td.sm { font-size: 12px; color: var(--label-2); }
+td.hi { font-weight: 600; }
+tr.me { background: var(--fill); }
+tr.me td.nm { font-weight: 600; }
+.mobs { display: block; }
+.full { display: none; }
+@media (min-width: 700px) { .mobs { display: none; } .full { display: block; } }
+.mrow { padding: 8px 2px; border-bottom: .5px solid var(--sep); }
+.mrow.me { background: var(--fill); border-radius: 8px; padding: 8px; }
+.mline1 { display: flex; align-items: baseline; gap: 8px; }
+.mline1 .rk { color: var(--label-3); font-size: 12px; width: 16px; flex: none; }
+.mline1 .nm { flex: 1; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mline1 .nm.me { font-weight: 600; }
+.mline1 .vw { font-weight: 600; font-size: 16px; flex: none; }
+.mline1 .dl { font-size: 12px; text-align: right; flex: none; min-width: 58px; }
+.mline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+
+/* ---------- 分段控制（iOS UISegmentedControl） ---------- */
+.tabs input { display: none; }
+.tabbar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  background: var(--fill); border-radius: 9px; padding: 2px; height: 32px; margin: 0 0 12px;
+}
+.tabbar label {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--label); border-radius: 7px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#tr24:checked ~ .tabbar label[for=tr24],
+#tr48:checked ~ .tabbar label[for=tr48],
+#tr7:checked ~ .tabbar label[for=tr7],
+#tr30:checked ~ .tabbar label[for=tr30] { background: var(--seg-sel); font-weight: 600; }
+.panels > .panel { display: none; }
+#tr24:checked ~ .panels .p24,
+#tr48:checked ~ .panels .p48,
+#tr7:checked ~ .panels .p7,
+#tr30:checked ~ .panels .p30 { display: block; }
+
+/* ---------- 走勢圖 ---------- */
+.chart { position: relative; width: 100%; margin: 0; touch-action: pan-y; }
+.chart svg { display: block; }
+.chart svg .grid { stroke: var(--sep); stroke-width: 1; }
+.chart svg .ytick, .chart svg .xtick { fill: var(--label-2); font-size: 11px; }
+.chart svg .stop-top { stop-color: var(--accent); stop-opacity: .20; }
+.chart svg .stop-bot { stop-color: var(--accent); stop-opacity: 0; }
+.chart svg .line-est { fill: none; stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart svg .line-real { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart svg .outlier { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.chart svg .band { fill: var(--accent); fill-opacity: .10; stroke: none; }
+.chart svg .badge { fill: var(--accent); }
+.chart svg .badge-t { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
+.chart svg .cross { stroke: var(--sep); stroke-width: 1; pointer-events: none; }
+.chart svg .cross-dot { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; pointer-events: none; }
+.chart svg .note-band { fill: var(--fill); }
+.chart svg .note-line { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.chart svg .note-txt { fill: var(--label-2); font-size: 11px; }
+
+/* 圖例（分段控制下方同一行） */
+.lgd { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--label-2); margin: 0 0 8px; }
+.lgd .li { display: inline-flex; align-items: center; gap: 8px; }
+.lgd svg { display: block; }
+.lgd .lg-real { stroke: var(--accent); stroke-width: 2; }
+.lgd .lg-est { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.lgd .lg-band { fill: var(--accent); fill-opacity: .10; }
+
+/* 本時窗摘要（圖上方一行） */
+.wsum { font-size: 13px; color: var(--label-2); margin: 0 0 4px; }
+.wsum b { color: var(--label); font-weight: 600; }
+
+/* 十字線 tooltip */
+.tt {
+  position: absolute; z-index: 3; pointer-events: none; opacity: 0;
+  transition: opacity .12s ease;
+  /* 用 --card-2：tooltip 疊在同為 --card 的走勢卡上，若用 --card 會完全看不見（深色模式實測） */
+  background: var(--card-2); color: var(--label);
+  border: .5px solid var(--sep); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; line-height: 1.45; white-space: nowrap;
+}
+.tt.on { opacity: 1; }
+.tt .t1 { color: var(--label-2); font-size: 12px; }
+.tt .v { font-size: 15px; font-weight: 600; }
+.tt .src { color: var(--label-2); font-size: 12px; }
+
+/* ---------- 其他 ---------- */
+.movers { margin: 0; padding-left: 16px; font-size: 14px; color: var(--label-2); }
+.movers li { margin: 2px 0; }
+.movers b { color: var(--label); font-weight: 600; }
+.split { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px) { .split { grid-template-columns: 1fr 1fr; } }
+footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 1.6; }
+
+/* ============================================================================
+   C 階段：頁面結構（導覽列／大標／Hero／群組列表／details／頁尾）
+   ========================================================================== */
+
+/* ---------- 導覽列：sticky、毛玻璃 ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -16px -16px 16px; padding: 12px 16px;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.nav-t { font-size: 17px; font-weight: 600; }
+
+/* ---------- 頁面大標 ---------- */
+.page-head { margin: 0 0 16px; }
+.page-head .sub { margin: 0; }
+
+/* ---------- Hero 卡 ---------- */
+.hero-n { display: flex; align-items: baseline; gap: 8px; }
+.hero-n b { font-size: 48px; font-weight: 600; letter-spacing: -.5px; line-height: 1.05; }
+.hero-n span { font-size: 17px; color: var(--label-2); }
+.hero-l { margin: 8px 0 16px; font-size: 15px; color: var(--label-2); }
+.hero-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hero-3 > div { background: var(--card-2); border-radius: 12px; padding: 12px; }
+.hero-3 label { display: block; font-size: 12px; color: var(--label-2); }
+.hero-3 b { font-size: 17px; font-weight: 600; }
+@media (min-width: 1024px) { .hero-n b { font-size: 56px; } }
+
+/* ---------- 群組列表（iOS Settings 樣式） ---------- */
+.glist { margin: 0; padding: 0; }
+.grow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 12px 0 12px 16px;
+  border-bottom: .5px solid var(--sep); font-size: 16px;
+}
+.grow:last-child { border-bottom: 0; }
+.grow .gv { color: var(--label-2); text-align: right; }
+.grow .gv b { color: var(--label); font-weight: 600; }
+
+/* ---------- 全服排行列 ---------- */
+.rrow { min-height: 44px; padding: 12px 0 12px 16px; border-bottom: .5px solid var(--sep); }
+.rrow:last-child { border-bottom: 0; }
+.rrow.me { background: var(--fill); border-radius: 8px; padding-left: 12px; padding-right: 12px; }
+.rline1 { display: flex; align-items: baseline; gap: 8px; }
+.rline1 .rk { color: var(--label-3); font-size: 12px; min-width: 20px; }
+.rline1 .nm {
+  flex: 1; font-size: 16px; color: var(--label); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rrow.me .rline1 .nm { color: var(--accent); font-weight: 600; }
+.rline1 .vw { font-weight: 600; font-size: 16px; }
+.rline1 .dl { font-size: 13px; color: var(--label-3); min-width: 56px; text-align: right; }
+.rline1 .dl.hi { color: var(--label); font-weight: 600; }   /* |Δ| >= 2% 才強調（不用紅綠） */
+.rline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+
+/* ---------- details（全服排行／口徑說明共用） ---------- */
+details.dsc > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 44px; font-size: 20px; font-weight: 600;
+  cursor: pointer; list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+details.dsc > summary::-webkit-details-marker { display: none; }
+details.dsc > summary .dsub {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 400; color: var(--label-2);
+}
+details.dsc > summary .dsub::after {
+  content: "›"; font-size: 17px; color: var(--label-3);
+  transition: transform .15s ease;
+}
+details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
+.dbody { margin-top: 12px; }
+
+/* ---------- 口徑說明 ---------- */
+.method p { margin: 0 0 8px; font-size: 13px; color: var(--label-2); }
+.method p b { color: var(--label); }
+.method .mt { font-size: 15px; font-weight: 600; color: var(--label); margin: 16px 0 8px; }
+
+.notice {
+  margin: 0 0 16px; padding: 12px; border-radius: 12px;
+  background: var(--warn-soft); color: var(--warn); font-size: 13px;
+}
 </style>
 </head>
 <body>
-<header>
-  <h1>天堂經典版 天幣幣值</h1>
-  <div class="sub">資料來源：DD373 天幣掛單 ｜ 匯率 CNY→TWD 4.8170 ｜ 掃到 22/22 台
-  ｜ 全服掃描 10/17 02:13（11 分鐘前）　⚠️ 使用快取
-  ｜ 下次全服重掃 約 03:20（±6 分）</div>
-  <div class="sub">⚡ 飛馬每 15 分鐘輕掃：02:22 掃到 ② 944（1 分鐘前）</div>
-  
+
+<nav class="nav">
+  <span class="nav-t">天幣幣值</span>
+  <span class="capsule" data-fresh><span class="d"></span><span data-ts="1792174969" data-rel="1">13 分鐘前</span></span>
+</nav>
+
+<div class="notice bad" id="stale-banner" hidden></div>
+<header class="page-head">
+  <h1>飛馬珀伽索斯</h1>
+  <p class="sub">DD373 · 買滿 5,000 萬天幣加權</p>
 </header>
 
-<section class="card accent">
-  <h2>飛馬珀伽索斯<span>即時掃描 10/17 02:13（11 分鐘前）</span></h2>
-  <div class="kpis">
-    <div class="kpi"><label>★ 買滿 5,000 萬金（加權幣值）</label><b class="pri">944</b><i>1 台幣 ≈ N 金 <span class="up">⬆ +0.5%</span></i></div>
-    <div class="kpi"><label>最低一筆（①）</label><b>948</b><i>1 台幣 ≈ N 金（起售 650 萬金）</i></div>
-    <div class="kpi"><label>變現（賣金）</label><b>988</b><i>1 台幣可賣 N 金 <span class="flat">➖ +0.0%</span></i></div>
-    <div class="kpi"><label>掛單總量</label><b>1.60 億</b><i>20 筆／有效 6 筆</i></div>
-  </div>
-  <div class="notes">
-    <div>📍 全服 22 台排名：幣值（買金划算度）<b>第 22 名</b>／變現划算度 <b>第 1 名</b></div>
-    <div>🧮 同樣買 5,000 萬金：最划算的 <b>戰神馬爾斯</b>（1,642 金/元）比飛馬多買 <b>42%</b> 的金；飛馬要 NT$52,936、它只要 NT$30,454</div>
-    <div>📦 飛馬掛單總量 <b>1.60 億金</b>　⚠️ 薄市場，數字易被單一賣家左右</div>
-    <div>💡 台幣換算：買 5,000 萬金 ≈ <b>NT$52,936</b>（以 ② 加權計）｜匯率 CNY→TWD 4.8170</div>
-  </div>
-</section>
-<section class="card">
-  <h2>全服 22 台排行<span>★ 金色＝買滿 5,000 萬金的加權幣值（1 台幣 ≈ N 金，越大越划算）</span></h2>
-  <div class="mob"><div class='mrow'><div class='mline1'><span class='rk'>1</span><span class='nm'>戰神馬爾斯</span><span class='vw pri'>1,642</span><span class='dl down'>⬇ -0.2%</span></div><div class='mline2'>① 1,653 ・ 變現 1715 ・ 掛單 1.60億 ・ 吃 7 筆 ・ 買 5,000 萬金 ≈ NT$30,454</div></div><div class='mrow'><div class='mline1'><span class='rk'>2</span><span class='nm'>公牛克里特</span><span class='vw pri'>1,636</span><span class='dl down'>⬇ -1.8%</span></div><div class='mline2'>① 1,649 ・ 變現 1823 ・ 掛單 2.64億 ・ 吃 5 筆 ・ 買 5,000 萬金 ≈ NT$30,573</div></div><div class='mrow'><div class='mline1'><span class='rk'>3</span><span class='nm'>天后海拉</span><span class='vw pri'>1,629</span><span class='dl down'>⬇ -0.2%</span></div><div class='mline2'>① 1,635 ・ 變現 1901 ・ 掛單 1.93億 ・ 吃 7 筆 ・ 買 5,000 萬金 ≈ NT$30,693</div></div><div class='mrow'><div class='mline1'><span class='rk'>4</span><span class='nm'>半人馬涅索斯</span><span class='vw pri'>1,618</span><span class='dl up'>⬆ +0.8%</span></div><div class='mline2'>① 1,622 ・ 變現 2076 ・ 掛單 4.09億 ・ 吃 4 筆 ・ 買 5,000 萬金 ≈ NT$30,904</div></div><div class='mrow'><div class='mline1'><span class='rk'>5</span><span class='nm'>月亮女神阿緹蜜斯</span><span class='vw pri'>1,616</span><span class='dl up'>⬆ +0.2%</span></div><div class='mline2'>① 1,622 ・ 變現 1700 ・ 掛單 4.00億 ・ 吃 4 筆 ・ 買 5,000 萬金 ≈ NT$30,939</div></div><div class='mrow'><div class='mline1'><span class='rk'>6</span><span class='nm'>獅子涅墨亞</span><span class='vw pri'>1,613</span><span class='dl down'>⬇ -1.4%</span></div><div class='mline2'>① 1,635 ・ 變現 2076 ・ 掛單 1.23億 ・ 吃 7 筆 ・ 買 5,000 萬金 ≈ NT$31,006</div></div><div class='mrow'><div class='mline1'><span class='rk'>7</span><span class='nm'>地獄犬刻耳柏洛斯</span><span class='vw pri'>1,599</span><span class='dl down'>⬇ -1.0%</span></div><div class='mline2'>① 1,602 ・ 變現 1674 ・ 掛單 7.49億 ・ 吃 2 筆 ・ 買 5,000 萬金 ≈ NT$31,261</div></div><div class='mrow'><div class='mline1'><span class='rk'>8</span><span class='nm'>蛇髮女墨杜沙</span><span class='vw pri'>1,584</span><span class='dl flat'>➖ -0.1%</span></div><div class='mline2'>① 1,597 ・ 變現 2076 ・ 掛單 3.43億 ・ 吃 5 筆 ・ 買 5,000 萬金 ≈ NT$31,557</div></div><div class='mrow'><div class='mline1'><span class='rk'>9</span><span class='nm'>勝利女神雅典娜</span><span class='vw pri'>1,582</span><span class='dl flat'>➖ +0.1%</span></div><div class='mline2'>① 1,590 ・ 變現 1702 ・ 掛單 2.19億 ・ 吃 5 筆 ・ 買 5,000 萬金 ≈ NT$31,614</div></div><div class='mrow'><div class='mline1'><span class='rk'>10</span><span class='nm'>天神宙斯</span><span class='vw pri'>1,518</span><span class='dl flat'>➖ +0.0%</span></div><div class='mline2'>① 1,549 ・ 變現 1729 ・ 掛單 4.25億 ・ 吃 7 筆 ・ 買 5,000 萬金 ≈ NT$32,936</div></div><div class='mrow'><div class='mline1'><span class='rk'>11</span><span class='nm'>愛神邱比特</span><span class='vw pri'>1,509</span><span class='dl up'>⬆ +0.6%</span></div><div class='mline2'>① 1,526 ・ 變現 2076 ・ 掛單 3.28億 ・ 吃 7 筆 ・ 買 5,000 萬金 ≈ NT$33,136</div></div><div class='mrow'><div class='mline1'><span class='rk'>12</span><span class='nm'>海神波塞頓</span><span class='vw pri'>1,481</span><span class='dl up'>⬆ +0.2%</span></div><div class='mline2'>① 1,494 ・ 變現 1565 ・ 掛單 1.68億 ・ 吃 11 筆 ・ 買 5,000 萬金 ≈ NT$33,768</div></div><div class='mrow'><div class='mline1'><span class='rk'>13</span><span class='nm'>水蛇許德拉</span><span class='vw pri'>1,464</span><span class='dl flat'>➖ -0.1%</span></div><div class='mline2'>① 1,483 ・ 變現 1555 ・ 掛單 2.87億 ・ 吃 8 筆 ・ 買 5,000 萬金 ≈ NT$34,164</div></div><div class='mrow'><div class='mline1'><span class='rk'>14</span><span class='nm'>太陽神阿波羅</span><span class='vw pri'>1,463</span><span class='dl down'>⬇ -0.2%</span></div><div class='mline2'>① 1,472 ・ 變現 1536 ・ 掛單 2.61億 ・ 吃 8 筆 ・ 買 5,000 萬金 ≈ NT$34,176</div></div><div class='mrow'><div class='mline1'><span class='rk'>15</span><span class='nm'>獨眼巨人庫克羅普斯</span><span class='vw pri'>1,295</span><span class='dl down'>⬇ -0.8%</span></div><div class='mline2'>① 1,316 ・ 變現 1370 ・ 掛單 1.82億 ・ 吃 10 筆 ・ 買 5,000 萬金 ≈ NT$38,620</div></div><div class='mrow'><div class='mline1'><span class='rk'>16</span><span class='nm'>泰坦女神瑞亞</span><span class='vw pri'>1,258</span><span class='dl flat'>➖ -0.0%</span></div><div class='mline2'>① 1,258 ・ 變現 1321 ・ 掛單 2.36億 ・ 吃 2 筆 ・ 買 5,000 萬金 ≈ NT$39,742</div></div><div class='mrow'><div class='mline1'><span class='rk'>17</span><span class='nm'>火神赫發斯特斯</span><span class='vw pri'>1,255</span><span class='dl flat'>➖ -0.1%</span></div><div class='mline2'>① 1,258 ・ 變現 1306 ・ 掛單 8.34億 ・ 吃 5 筆 ・ 買 5,000 萬金 ≈ NT$39,850</div></div><div class='mrow'><div class='mline1'><span class='rk'>18</span><span class='nm'>美神維納斯</span><span class='vw pri'>1,229</span><span class='dl down'>⬇ -0.6%</span></div><div class='mline2'>① 1,236 ・ 變現 2076 ・ 掛單 2.93億 ・ 吃 6 筆 ・ 買 5,000 萬金 ≈ NT$40,673</div></div><div class='mrow'><div class='mline1'><span class='rk'>19</span><span class='nm'>牛人彌諾陶洛斯</span><span class='vw pri'>1,134</span><span class='dl flat'>➖ -0.1%</span></div><div class='mline2'>① 1,147 ・ 變現 2076 ・ 掛單 2.36億 ・ 吃 8 筆 ・ 買 5,000 萬金 ≈ NT$44,077</div></div><div class='mrow'><div class='mline1'><span class='rk'>20</span><span class='nm'>收獲女神蒂蜜特</span><span class='vw pri'>1,096</span><span class='dl down'>⬇ -1.0%</span></div><div class='mline2'>① 1,122 ・ 變現 2076 ・ 掛單 0.83億 ・ 吃 12 筆 ・ 買 5,000 萬金 ≈ NT$45,620</div></div><div class='mrow'><div class='mline1'><span class='rk'>21</span><span class='nm'>冥王黑帝斯</span><span class='vw pri'>1,051</span><span class='dl up'>⬆ +0.6%</span></div><div class='mline2'>① 1,076 ・ 變現 1140 ・ 掛單 0.84億 ・ 吃 9 筆 ・ 買 5,000 萬金 ≈ NT$47,588</div></div><div class='mrow me'><div class='mline1'><span class='rk'>22</span><span class='nm'>飛馬珀伽索斯</span><span class='vw pri'>944</span><span class='dl up'>⬆ +0.5%</span></div><div class='mline2'>① 948 ・ 變現 988 ・ 掛單 1.60億 ・ 吃 8 筆 ・ 買 5,000 萬金 ≈ NT$52,936</div></div></div>
-  <div class="full chart" style="overflow-x:auto">
-  <table>
-    <thead><tr><th></th><th class="nm">伺服器</th><th class="pri">②5000萬 金/元 ★</th><th>①最低</th><th>變現</th><th>吃筆</th><th>掛單</th><th>vs上次</th></tr></thead>
-    <tbody><tr class='down'><td class='rk'>1</td><td class='nm'>戰神馬爾斯</td><td class='num hi pri'>1,642</td><td class='num'>1,653</td><td class='num'>1715</td><td class='num sm'>7</td><td class='num sm'>1.60億</td><td class='num sm down'>⬇ -0.2%</td></tr><tr class='down'><td class='rk'>2</td><td class='nm'>公牛克里特</td><td class='num hi pri'>1,636</td><td class='num'>1,649</td><td class='num'>1823</td><td class='num sm'>5</td><td class='num sm'>2.64億</td><td class='num sm down'>⬇ -1.8%</td></tr><tr class='down'><td class='rk'>3</td><td class='nm'>天后海拉</td><td class='num hi pri'>1,629</td><td class='num'>1,635</td><td class='num'>1901</td><td class='num sm'>7</td><td class='num sm'>1.93億</td><td class='num sm down'>⬇ -0.2%</td></tr><tr class='up'><td class='rk'>4</td><td class='nm'>半人馬涅索斯</td><td class='num hi pri'>1,618</td><td class='num'>1,622</td><td class='num'>2076</td><td class='num sm'>4</td><td class='num sm'>4.09億</td><td class='num sm up'>⬆ +0.8%</td></tr><tr class='up'><td class='rk'>5</td><td class='nm'>月亮女神阿緹蜜斯</td><td class='num hi pri'>1,616</td><td class='num'>1,622</td><td class='num'>1700</td><td class='num sm'>4</td><td class='num sm'>4.00億</td><td class='num sm up'>⬆ +0.2%</td></tr><tr class='down'><td class='rk'>6</td><td class='nm'>獅子涅墨亞</td><td class='num hi pri'>1,613</td><td class='num'>1,635</td><td class='num'>2076</td><td class='num sm'>7</td><td class='num sm'>1.23億</td><td class='num sm down'>⬇ -1.4%</td></tr><tr class='down'><td class='rk'>7</td><td class='nm'>地獄犬刻耳柏洛斯</td><td class='num hi pri'>1,599</td><td class='num'>1,602</td><td class='num'>1674</td><td class='num sm'>2</td><td class='num sm'>7.49億</td><td class='num sm down'>⬇ -1.0%</td></tr><tr class='flat'><td class='rk'>8</td><td class='nm'>蛇髮女墨杜沙</td><td class='num hi pri'>1,584</td><td class='num'>1,597</td><td class='num'>2076</td><td class='num sm'>5</td><td class='num sm'>3.43億</td><td class='num sm flat'>➖ -0.1%</td></tr><tr class='flat'><td class='rk'>9</td><td class='nm'>勝利女神雅典娜</td><td class='num hi pri'>1,582</td><td class='num'>1,590</td><td class='num'>1702</td><td class='num sm'>5</td><td class='num sm'>2.19億</td><td class='num sm flat'>➖ +0.1%</td></tr><tr class='flat'><td class='rk'>10</td><td class='nm'>天神宙斯</td><td class='num hi pri'>1,518</td><td class='num'>1,549</td><td class='num'>1729</td><td class='num sm'>7</td><td class='num sm'>4.25億</td><td class='num sm flat'>➖ +0.0%</td></tr><tr class='up'><td class='rk'>11</td><td class='nm'>愛神邱比特</td><td class='num hi pri'>1,509</td><td class='num'>1,526</td><td class='num'>2076</td><td class='num sm'>7</td><td class='num sm'>3.28億</td><td class='num sm up'>⬆ +0.6%</td></tr><tr class='up'><td class='rk'>12</td><td class='nm'>海神波塞頓</td><td class='num hi pri'>1,481</td><td class='num'>1,494</td><td class='num'>1565</td><td class='num sm'>11</td><td class='num sm'>1.68億</td><td class='num sm up'>⬆ +0.2%</td></tr><tr class='flat'><td class='rk'>13</td><td class='nm'>水蛇許德拉</td><td class='num hi pri'>1,464</td><td class='num'>1,483</td><td class='num'>1555</td><td class='num sm'>8</td><td class='num sm'>2.87億</td><td class='num sm flat'>➖ -0.1%</td></tr><tr class='down'><td class='rk'>14</td><td class='nm'>太陽神阿波羅</td><td class='num hi pri'>1,463</td><td class='num'>1,472</td><td class='num'>1536</td><td class='num sm'>8</td><td class='num sm'>2.61億</td><td class='num sm down'>⬇ -0.2%</td></tr><tr class='down'><td class='rk'>15</td><td class='nm'>獨眼巨人庫克羅普斯</td><td class='num hi pri'>1,295</td><td class='num'>1,316</td><td class='num'>1370</td><td class='num sm'>10</td><td class='num sm'>1.82億</td><td class='num sm down'>⬇ -0.8%</td></tr><tr class='flat'><td class='rk'>16</td><td class='nm'>泰坦女神瑞亞</td><td class='num hi pri'>1,258</td><td class='num'>1,258</td><td class='num'>1321</td><td class='num sm'>2</td><td class='num sm'>2.36億</td><td class='num sm flat'>➖ -0.0%</td></tr><tr class='flat'><td class='rk'>17</td><td class='nm'>火神赫發斯特斯</td><td class='num hi pri'>1,255</td><td class='num'>1,258</td><td class='num'>1306</td><td class='num sm'>5</td><td class='num sm'>8.34億</td><td class='num sm flat'>➖ -0.1%</td></tr><tr class='down'><td class='rk'>18</td><td class='nm'>美神維納斯</td><td class='num hi pri'>1,229</td><td class='num'>1,236</td><td class='num'>2076</td><td class='num sm'>6</td><td class='num sm'>2.93億</td><td class='num sm down'>⬇ -0.6%</td></tr><tr class='flat'><td class='rk'>19</td><td class='nm'>牛人彌諾陶洛斯</td><td class='num hi pri'>1,134</td><td class='num'>1,147</td><td class='num'>2076</td><td class='num sm'>8</td><td class='num sm'>2.36億</td><td class='num sm flat'>➖ -0.1%</td></tr><tr class='down'><td class='rk'>20</td><td class='nm'>收獲女神蒂蜜特</td><td class='num hi pri'>1,096</td><td class='num'>1,122</td><td class='num'>2076</td><td class='num sm'>12</td><td class='num sm'>0.83億</td><td class='num sm down'>⬇ -1.0%</td></tr><tr class='up'><td class='rk'>21</td><td class='nm'>冥王黑帝斯</td><td class='num hi pri'>1,051</td><td class='num'>1,076</td><td class='num'>1140</td><td class='num sm'>9</td><td class='num sm'>0.84億</td><td class='num sm up'>⬆ +0.6%</td></tr><tr class='up me'><td class='rk'>22</td><td class='nm'>飛馬珀伽索斯</td><td class='num hi pri'>944</td><td class='num'>948</td><td class='num'>988</td><td class='num sm'>8</td><td class='num sm'>1.60億</td><td class='num sm up'>⬆ +0.5%</td></tr></tbody>
-  </table>
-  </div>
-  <div class="notes">
-    <div><span class="pri">★ 主要看「② 買滿 5,000 萬金」</span>＝1 台幣買到幾金（從最便宜往上吃到 5,000 萬金的加權值，越大＝金越便宜）；「①最低」＝全檔位最便宜的單筆單價（小額實際買得到）；「變現」＝DD373 收購區（數字越小＝賣金換到越多台幣）。底色較亮的那列＝飛馬。</div>
-    <div>🟢 買金最划算：<b>戰神馬爾斯</b>（②1,642）, <b>公牛克里特</b>（②1,636）, <b>天后海拉</b>（②1,629）</div>
-    <div>💰 變現最划算（數字低）：<b>飛馬珀伽索斯</b>（988）, <b>冥王黑帝斯</b>（1140）, <b>火神赫發斯特斯</b>（1306）</div>
-    <div>🐳 深市場（大額不會被抬價）：火神赫發斯特斯 8.3億, 地獄犬刻耳柏洛斯 7.5億, 天神宙斯 4.2億</div>
-    <div>⚠️ 薄市場（&lt;2 億金，數字易失真）：收獲女神蒂蜜特 0.83億, 冥王黑帝斯 0.84億, 獅子涅墨亞 1.23億</div>
-    <div class="muted">口徑：① ＝ 全檔位最低單價（小額實際買得到，1 台幣≈N 金）；② ＝ 從最便宜往上吃到 5,000 萬金為止的加權平均（＝買滿 5,000 萬金的實際幣值，本頁主數字）；變現 ＝ DD373 收購區掛單（數字越小＝賣金換到越多台幣）。</div>
+<section class="card lg hero">
+  <div class="hero-n"><b>944</b><span>天幣/元</span></div>
+  <p class="hero-l">1 台幣買 944 天幣 · 天幣變便宜 1.0%（24 小時）</p>
+  <div class="hero-3">
+    <div><label>最低一筆</label><b>948</b></div>
+    <div><label>變現</label><b>988</b></div>
+    <div><label>掛單</label><b>1.60 億天幣</b> <span class="tag">薄市場</span></div>
   </div>
 </section>
 
-<section class="card">
-  <h2>飛馬走勢<span>四個時間窗（點標籤切換）｜同一把尺＝② 買滿 5,000 萬金加權幣值</span></h2>
+<section class="card lg">
   <div class="tabs">
     <input type="radio" name="tr" id="tr24" checked>
     <input type="radio" name="tr" id="tr48">
@@ -126,33 +352,79 @@ a{color:#6ab0ff}
     <div class="tabbar">
       <label for="tr24">24 小時</label><label for="tr48">48 小時</label><label for="tr7">7 天</label><label for="tr30">30 天</label>
     </div>
-    <div class="panels">
-      <div class="panel p24"><div class="chart" data-win="24h"></div><div class="legend"><span class="dot red"></span>② 買滿 5,000 萬金加權幣值（15 分輕掃 + 每小時全服）｜115 點｜最新 <b>944</b> @ 02:24<br>數字＝1 台幣買到幾金（買滿 5,000 萬金加權），<b>越高＝金越便宜</b></div></div>
-      <div class="panel p48"><div class="chart" data-win="48h"></div><div class="legend"><span class="dot burnt"></span>實線＝實測 ②｜230 點｜最新 <b>944</b> @ 02:24<br>本窗全為實測（② 口徑自 10/14 19:01 起連續記錄，無估算段）；數字＝1 台幣買到幾金，<b>越高＝金越便宜</b></div></div>
-      <div class="panel p7"><div class="chart" data-win="7d"></div><div class="legend"><span class="dot orange"></span>實線＝實測 ②｜270 點｜最新 <b>944</b> @ 02:24｜<b>虛線＝估算 ②</b>（9/15 起、由實買 × 0.9996 換算，非實測）<br>② 口徑自 10/14 19:01 開始記錄（目前累積 55 小時），7 天／30 天窗會逐日長出來</div></div>
-      <div class="panel p30"><div class="chart" data-win="30d"></div><div class="legend"><span class="dot red"></span>實線＝實測 ②｜270 點｜最新 <b>944</b> @ 02:24｜<b>虛線＝估算 ②</b>（9/15 起、由實買 × 0.9996 換算，非實測）<br>② 口徑自 10/14 19:01 開始記錄（目前累積 55 小時），7 天／30 天窗會逐日長出來</div></div>
+    <div class="lgd">
+      <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-real" d="M1,4 H19"/></svg>實測</span>
+      <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
     </div>
-  </div>
-  <div class="notes">
-    <div>📏 四個頁籤＋上方表格／KPI <b>全部同一把尺</b>＝<b>② 買滿 5,000 萬金加權幣值</b>（1 台幣≈N 金，越高＝金越便宜），線尾都接到現在。</div>
-    <div>🧮 <b>灰虛線＝估算 ②</b>：實測 ② 只從 10/14 19:01 開始記錄；更早的用舊的「實買」序列 × 比率 0.9996 換算（比率取自兩者同時段的實測配對，誤差 &lt;1%，但仍屬<b>估算</b>，趨勢可信、絕對值只能當參考）。48 小時窗完全落在實測範圍內，所以沒有虛線。</div>
-    <div>ℹ️ ② 口徑自 10/14 19:01 開始記錄（目前累積 55 小時），7 天／30 天窗會逐日長出來。</div>
+    <div class="panels">
+      <div class="panel p24"><div class="wsum" data-win="24h"></div><div class="chart" data-win="24h"></div></div>
+      <div class="panel p48"><div class="wsum" data-win="48h"></div><div class="chart" data-win="48h"></div></div>
+      <div class="panel p7"><div class="wsum" data-win="7d"></div><div class="chart" data-win="7d"></div></div>
+      <div class="panel p30"><div class="wsum" data-win="30d"></div><div class="chart" data-win="30d"></div></div>
+    </div>
   </div>
 </section>
 
 <section class="card">
-  <h2>近一個月各服 ② 幣值變化<span>9/17~9/29 均（估算）vs 最近 3 天均（實測優先、不足處以估算補）｜同一把尺＝② 買滿 5,000 萬金加權</span></h2>
-  <div class="split">
-    <div><h3 class="up">金變便宜（1 元買到更多金）</h3><ul class='movers up'><li><b>公牛克里特</b> +60.9%<span class='muted'>（1 台幣 1,015 → 1,634 金）</span></li><li><b>半人馬涅索斯</b> +10.4%<span class='muted'>（1 台幣 1,483 → 1,637 金）</span></li><li><b>天后海拉</b> +9.3%<span class='muted'>（1 台幣 1,466 → 1,602 金）</span></li><li><b>蛇髮女墨杜沙</b> +8.3%<span class='muted'>（1 台幣 1,475 → 1,597 金）</span></li></ul></div>
-    <div><h3 class="down">金變貴（1 元買到更少金）</h3><ul class='movers down'><li><b>飛馬珀伽索斯</b> -37.8%<span class='muted'>（1 台幣 1,478 → 919 金）</span></li><li><b>冥王黑帝斯</b> -29.8%<span class='muted'>（1 台幣 1,499 → 1,053 金）</span></li><li><b>收獲女神蒂蜜特</b> -23.6%<span class='muted'>（1 台幣 1,475 → 1,126 金）</span></li><li><b>牛人彌諾陶洛斯</b> -21.7%<span class='muted'>（1 台幣 1,486 → 1,164 金）</span></li></ul></div>
+  <div class="glist">
+    <div class="grow"><span>買 5,000 萬天幣</span><span class="gv"><b>≈ NT$52,936</b></span></div>
+    <div class="grow"><span>掛單深度</span><span class="gv">總量 <b>1.60 億天幣</b>／買滿 5,000 萬天幣要吃 <b>8</b> 筆</span></div>
+    <div class="grow"><span>全服排名</span><span class="gv"><b>第 22／22 名</b> <span class="tag">移民參考</span></span></div>
   </div>
 </section>
+
+<section class="card">
+  <details class="dsc">
+    <summary><span>全服排行</span><span class="dsub">飛馬第 22／22 名</span></summary>
+    <div class="dbody glist"><div class="rrow me"><div class="rline1"><span class="rk">22</span><span class="nm">飛馬珀伽索斯</span><span class="vw">944</span><span class="dl">▲ +0.5%</span></div><div class="rline2">① 948 ・ 變現 988 ・ 吃 8 筆 ・ 掛單 1.60 億天幣 ・ 買 5,000 萬天幣 ≈ NT$52,936</div></div><div class="rrow"><div class="rline1"><span class="rk">1</span><span class="nm">戰神馬爾斯</span><span class="vw">1,642</span><span class="dl">▼ −0.2%</span></div><div class="rline2">① 1,653 ・ 變現 1715 ・ 吃 7 筆 ・ 掛單 1.60 億天幣 ・ 買 5,000 萬天幣 ≈ NT$30,454</div></div><div class="rrow"><div class="rline1"><span class="rk">2</span><span class="nm">公牛克里特</span><span class="vw">1,636</span><span class="dl">▼ −1.8%</span></div><div class="rline2">① 1,649 ・ 變現 1823 ・ 吃 5 筆 ・ 掛單 2.64 億天幣 ・ 買 5,000 萬天幣 ≈ NT$30,573</div></div><div class="rrow"><div class="rline1"><span class="rk">3</span><span class="nm">天后海拉</span><span class="vw">1,629</span><span class="dl">▼ −0.2%</span></div><div class="rline2">① 1,635 ・ 變現 1901 ・ 吃 7 筆 ・ 掛單 1.93 億天幣 ・ 買 5,000 萬天幣 ≈ NT$30,693</div></div><div class="rrow"><div class="rline1"><span class="rk">4</span><span class="nm">半人馬涅索斯</span><span class="vw">1,618</span><span class="dl">▲ +0.8%</span></div><div class="rline2">① 1,622 ・ 變現 2076 ・ 吃 4 筆 ・ 掛單 4.09 億天幣 ・ 買 5,000 萬天幣 ≈ NT$30,904</div></div><div class="rrow"><div class="rline1"><span class="rk">5</span><span class="nm">月亮女神阿緹蜜斯</span><span class="vw">1,616</span><span class="dl">▲ +0.2%</span></div><div class="rline2">① 1,622 ・ 變現 1700 ・ 吃 4 筆 ・ 掛單 4.00 億天幣 ・ 買 5,000 萬天幣 ≈ NT$30,939</div></div><div class="rrow"><div class="rline1"><span class="rk">6</span><span class="nm">獅子涅墨亞</span><span class="vw">1,613</span><span class="dl">▼ −1.4%</span></div><div class="rline2">① 1,635 ・ 變現 2076 ・ 吃 7 筆 ・ 掛單 1.23 億天幣 ・ 買 5,000 萬天幣 ≈ NT$31,006</div></div><div class="rrow"><div class="rline1"><span class="rk">7</span><span class="nm">地獄犬刻耳柏洛斯</span><span class="vw">1,599</span><span class="dl">▼ −1.0%</span></div><div class="rline2">① 1,602 ・ 變現 1674 ・ 吃 2 筆 ・ 掛單 7.49 億天幣 ・ 買 5,000 萬天幣 ≈ NT$31,261</div></div><div class="rrow"><div class="rline1"><span class="rk">8</span><span class="nm">蛇髮女墨杜沙</span><span class="vw">1,584</span><span class="dl">▼ −0.1%</span></div><div class="rline2">① 1,597 ・ 變現 2076 ・ 吃 5 筆 ・ 掛單 3.43 億天幣 ・ 買 5,000 萬天幣 ≈ NT$31,557</div></div><div class="rrow"><div class="rline1"><span class="rk">9</span><span class="nm">勝利女神雅典娜</span><span class="vw">1,582</span><span class="dl">▲ +0.1%</span></div><div class="rline2">① 1,590 ・ 變現 1702 ・ 吃 5 筆 ・ 掛單 2.19 億天幣 ・ 買 5,000 萬天幣 ≈ NT$31,614</div></div><div class="rrow"><div class="rline1"><span class="rk">10</span><span class="nm">天神宙斯</span><span class="vw">1,518</span><span class="dl">– 0.0%</span></div><div class="rline2">① 1,549 ・ 變現 1729 ・ 吃 7 筆 ・ 掛單 4.25 億天幣 ・ 買 5,000 萬天幣 ≈ NT$32,936</div></div><div class="rrow"><div class="rline1"><span class="rk">11</span><span class="nm">愛神邱比特</span><span class="vw">1,509</span><span class="dl">▲ +0.6%</span></div><div class="rline2">① 1,526 ・ 變現 2076 ・ 吃 7 筆 ・ 掛單 3.28 億天幣 ・ 買 5,000 萬天幣 ≈ NT$33,136</div></div><div class="rrow"><div class="rline1"><span class="rk">12</span><span class="nm">海神波塞頓</span><span class="vw">1,481</span><span class="dl">▲ +0.2%</span></div><div class="rline2">① 1,494 ・ 變現 1565 ・ 吃 11 筆 ・ 掛單 1.68 億天幣 ・ 買 5,000 萬天幣 ≈ NT$33,768</div></div><div class="rrow"><div class="rline1"><span class="rk">13</span><span class="nm">水蛇許德拉</span><span class="vw">1,464</span><span class="dl">▼ −0.1%</span></div><div class="rline2">① 1,483 ・ 變現 1555 ・ 吃 8 筆 ・ 掛單 2.87 億天幣 ・ 買 5,000 萬天幣 ≈ NT$34,164</div></div><div class="rrow"><div class="rline1"><span class="rk">14</span><span class="nm">太陽神阿波羅</span><span class="vw">1,463</span><span class="dl">▼ −0.2%</span></div><div class="rline2">① 1,472 ・ 變現 1536 ・ 吃 8 筆 ・ 掛單 2.61 億天幣 ・ 買 5,000 萬天幣 ≈ NT$34,176</div></div><div class="rrow"><div class="rline1"><span class="rk">15</span><span class="nm">獨眼巨人庫克羅普斯</span><span class="vw">1,295</span><span class="dl">▼ −0.8%</span></div><div class="rline2">① 1,316 ・ 變現 1370 ・ 吃 10 筆 ・ 掛單 1.82 億天幣 ・ 買 5,000 萬天幣 ≈ NT$38,620</div></div><div class="rrow"><div class="rline1"><span class="rk">16</span><span class="nm">泰坦女神瑞亞</span><span class="vw">1,258</span><span class="dl">– 0.0%</span></div><div class="rline2">① 1,258 ・ 變現 1321 ・ 吃 2 筆 ・ 掛單 2.36 億天幣 ・ 買 5,000 萬天幣 ≈ NT$39,742</div></div><div class="rrow"><div class="rline1"><span class="rk">17</span><span class="nm">火神赫發斯特斯</span><span class="vw">1,255</span><span class="dl">▼ −0.1%</span></div><div class="rline2">① 1,258 ・ 變現 1306 ・ 吃 5 筆 ・ 掛單 8.34 億天幣 ・ 買 5,000 萬天幣 ≈ NT$39,850</div></div><div class="rrow"><div class="rline1"><span class="rk">18</span><span class="nm">美神維納斯</span><span class="vw">1,229</span><span class="dl">▼ −0.6%</span></div><div class="rline2">① 1,236 ・ 變現 2076 ・ 吃 6 筆 ・ 掛單 2.93 億天幣 ・ 買 5,000 萬天幣 ≈ NT$40,673</div></div><div class="rrow"><div class="rline1"><span class="rk">19</span><span class="nm">牛人彌諾陶洛斯</span><span class="vw">1,134</span><span class="dl">▼ −0.1%</span></div><div class="rline2">① 1,147 ・ 變現 2076 ・ 吃 8 筆 ・ 掛單 2.36 億天幣 ・ 買 5,000 萬天幣 ≈ NT$44,077</div></div><div class="rrow"><div class="rline1"><span class="rk">20</span><span class="nm">收獲女神蒂蜜特</span><span class="vw">1,096</span><span class="dl">▼ −1.0%</span></div><div class="rline2">① 1,122 ・ 變現 2076 ・ 吃 12 筆 ・ 掛單 0.83 億天幣 ・ 買 5,000 萬天幣 ≈ NT$45,620</div></div><div class="rrow"><div class="rline1"><span class="rk">21</span><span class="nm">冥王黑帝斯</span><span class="vw">1,051</span><span class="dl">▲ +0.6%</span></div><div class="rline2">① 1,076 ・ 變現 1140 ・ 吃 9 筆 ・ 掛單 0.84 億天幣 ・ 買 5,000 萬天幣 ≈ NT$47,588</div></div></div>
+  </details>
+</section>
+
+<section class="card">
+  <h2>移民期均值 vs 近 3 天<span>基準期 9/17~9/29＝第 2 次移民期（估算）／近 3 天（實測為主）｜同一把尺＝② 買滿 5,000 萬天幣加權</span></h2>
+  <div class="split">
+    <div><h3>天幣變便宜（1 元買到更多天幣）</h3><ul class='movers up'><li><b>公牛克里特</b> +60.9%<span class='muted'>（1,015 → 1,634 天幣/元）</span></li><li><b>半人馬涅索斯</b> +10.4%<span class='muted'>（1,483 → 1,637 天幣/元）</span></li><li><b>天后海拉</b> +9.3%<span class='muted'>（1,466 → 1,602 天幣/元）</span></li><li><b>蛇髮女墨杜沙</b> +8.3%<span class='muted'>（1,475 → 1,597 天幣/元）</span></li></ul></div>
+    <div><h3>天幣變貴（1 元買到更少天幣）</h3><ul class='movers down'><li><b>飛馬珀伽索斯</b> -37.8%<span class='muted'>（1,478 → 919 天幣/元）</span></li><li><b>冥王黑帝斯</b> -29.8%<span class='muted'>（1,499 → 1,053 天幣/元）</span></li><li><b>收獲女神蒂蜜特</b> -23.6%<span class='muted'>（1,475 → 1,126 天幣/元）</span></li><li><b>牛人彌諾陶洛斯</b> -21.7%<span class='muted'>（1,486 → 1,164 天幣/元）</span></li></ul></div>
+  </div>
+</section>
+
+<section class="card">
+  <details class="dsc">
+    <summary><span>口徑說明</span><span class="dsub">方法論</span></summary>
+    <div class="dbody method">
+      <p class="mt">同一把尺：② 買滿 5,000 萬天幣加權</p>
+      <p><b>② 買滿 5,000 萬天幣加權（本頁主數字）</b>＝從最便宜的掛單往上吃、累積到 5,000 萬天幣為止的加權平均單價，換算成天幣／元（<b>數字越大＝天幣越便宜</b>）。</p>
+      <p><b>① 最低一筆</b>＝全檔位最便宜的單筆單價（小額真的買得到的價，單位同為天幣/元）。</p>
+      <p><b>變現</b>＝DD373 收購區掛單（數字越小＝賣天幣換到越多台幣）。</p>
+      <p class="mt">掛單深度：筆數定義</p>
+      <p><b>n 筆</b>＝抓到的掛單則數（已去重，並濾掉起售 &lt;50 萬天幣、單價 &lt;0.5 或 &gt;8 元/萬天幣的異常卡）。</p>
+      <p><b>有效 n 筆</b>＝其中庫存 ≥1,000 萬天幣的現貨筆數（大額買得到的部分）。</p>
+      <p><b>吃筆</b>＝從最便宜的掛單往上吃到 5,000 萬天幣為止、總共吃掉的筆數（最後一筆可能只吃一部分）。</p>
+      <p class="mt">取樣與更新</p>
+      <p>全服 22 台每小時掃 1 次；飛馬另外每 15 分鐘輕掃 1 次（只影響飛馬數字與告警）。時間一律 Asia/Taipei。</p>
+      <p>台幣金額＝② 加權幣值換算（買 5,000 萬天幣的成本），匯率 CNY→TWD 4.8170（產生時）。</p>
+      <p class="mt">估算段（灰色虛線）</p>
+      <p>實測 ② 從 10/14 19:01 開始記錄；更早的資料用舊的「實買」序列 × 比率 0.9996 換算（比率取自兩者同時段的實測配對，誤差 &lt;1%）。估算段的趨勢可信，但<b>絕對值只能當參考</b>，不要與實測逐點比大小。</p>
+      <p class="mt">降採樣與圖上註記</p>
+      <p>7 天窗把實測聚合成 <b>1 小時中位數</b>、30 天窗聚合成 <b>4 小時中位數</b>；淡色帶是該時段的 <b>min–max</b> 區間。滑過去看得到該時段的中位數、區間與筆數；某個時段完全沒資料就斷線，不會硬連。</p>
+      <p>圖上的淡色背景帶＝<b>第 2 次移民期（9/16–9/29）</b>；虛線直線＝實測 ② 開始記錄的時間（<b>10/14 19:01</b>）。</p>
+      <p>斷線規則：<b>原始點</b>相鄰超過 30 分鐘就斷線；<b>7 天窗（1 小時聚合）中斷 3 小時以內不會在圖上斷線</b>；30 天窗（4 小時聚合）中斷 12 小時以內不會斷線（圖上看不出短暫中斷，數字本身一樣會缺）。</p>
+      <p class="mt">薄市場</p>
+      <p>掛單總量 &lt;2 億天幣時，單一賣家就能推動數字 → 一律標「薄市場」，看趨勢不要看單點。</p>
+      <p class="mt">排名的用途</p>
+      <p>平時天幣不能跨服，全服排名只在<b>移民時</b>有意義（移民參考）。</p>
+      <p class="mt">資料來源</p>
+      <p>DD373 天幣掛單（天堂經典版台服），本次掃到 22／22 台。</p>
+    </div>
+  </details>
+</section>
 <footer>
-  22 台掃描 ｜ 產生時間 2026/10/17 02:24:48 ｜ 純腳本產頁（0 token）｜ 全服每小時重掃、飛馬每 15 分鐘輕掃<br>
-  ⚠️ 平台掛單價格隨時變動，此頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+  產生時間 2026/10/17 02:36:01 ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD 4.8170<br>
+  平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
-<script type="application/json" id="chart-data">{"now":1792175088,"r":0.99961,"real":[[1791975660,945.3,945.3,0],[1791976080,944.0,944.0,0],[1791977580,942.6,942.6,0],[1791977820,942.6,942.6,0],[1791978720,944.0,944.0,0],[1791979620,944.9,944.9,0],[1791980520,945.1,945.1,0],[1791980760,944.3,944.3,0],[1791981420,945.4,945.4,0],[1791981720,939.5,939.5,0],[1791981780,939.5,939.5,0],[1791982320,937.5,937.5,0],[1791983220,942.3,942.3,0],[1791983280,942.3,942.3,0],[1791984120,941.9,941.9,0],[1791984180,941.9,941.9,0],[1791985020,937.3,937.3,0],[1791985920,928.2,928.2,0],[1791986820,928.3,928.3,0],[1791987720,930.7,930.7,0],[1791987840,930.7,930.7,0],[1791988620,928.8,928.8,0],[1791989520,930.2,930.2,0],[1791990420,934.9,934.9,0],[1791991320,940.1,940.1,0],[1791991440,940.1,940.1,0],[1791992220,942.5,942.5,0],[1791993120,943.6,943.6,0],[1791994020,949.7,949.7,0],[1791994920,949.7,949.7,0],[1791995160,947.1,947.1,0],[1791995820,946.1,946.1,0],[1791996720,942.6,942.6,0],[1791997620,944.0,950.6,1],[1791998520,944.0,944.0,0],[1791998760,944.0,944.0,0],[1791999420,942.4,942.4,0],[1792000320,942.4,942.4,0],[1792001220,942.4,942.4,0],[1792002120,936.3,936.3,0],[1792003020,936.3,936.3,0],[1792003920,937.3,937.3,0],[1792004820,937.9,937.9,0],[1792005660,937.9,937.9,0],[1792005720,937.9,937.9,0],[1792006620,936.3,936.3,0],[1792007520,936.3,936.3,0],[1792008420,936.3,936.3,0],[1792009260,936.3,936.3,0],[1792009320,936.3,936.3,0],[1792010220,936.3,936.3,0],[1792011120,936.3,936.3,0],[1792012020,936.3,936.3,0],[1792012920,936.3,936.3,0],[1792013820,936.3,936.3,0],[1792014720,936.3,936.3,0],[1792015620,933.9,933.9,0],[1792016520,933.7,933.7,0],[1792017420,933.7,933.7,0],[1792018320,933.7,933.7,0],[1792019220,933.7,933.7,0],[1792020120,933.7,933.7,0],[1792020420,933.7,933.7,0],[1792021020,933.7,933.7,0],[1792021920,933.7,933.7,0],[1792022820,933.7,933.7,0],[1792023720,930.0,930.0,0],[1792023780,930.0,930.0,0],[1792024620,930.0,930.0,0],[1792025520,930.0,930.0,0],[1792026420,927.9,927.9,0],[1792027320,927.9,927.9,0],[1792027380,927.9,927.9,0],[1792028220,928.2,928.2,0],[1792029120,928.1,929.0,1],[1792030020,928.1,928.1,0],[1792030920,923.9,923.9,0],[1792031220,923.9,923.9,0],[1792031820,923.9,923.9,0],[1792032720,925.5,925.5,0],[1792033620,926.3,926.3,0],[1792034520,924.6,924.6,0],[1792034640,924.6,924.6,0],[1792035420,929.4,929.4,0],[1792036320,930.8,930.8,0],[1792037220,927.1,927.1,0],[1792038120,925.7,925.7,0],[1792038300,925.7,925.7,0],[1792039020,923.1,923.1,0],[1792039920,923.2,923.2,0],[1792040820,923.7,923.7,0],[1792041720,923.7,928.0,1],[1792041960,924.0,928.0,1],[1792042620,923.7,923.7,0],[1792043520,924.0,924.0,0],[1792044420,924.0,924.0,0],[1792045320,925.1,925.1,0],[1792045500,925.1,925.1,0],[1792046220,924.0,924.0,0],[1792047120,917.1,917.1,0],[1792048020,897.3,897.3,0],[1792048920,907.7,907.7,0],[1792049040,899.2,863.0,1],[1792049820,899.2,899.2,0],[1792050720,901.5,901.5,0],[1792051620,893.1,893.1,0],[1792052460,876.5,876.5,0],[1792052520,876.5,876.5,0],[1792053420,876.1,876.1,0],[1792054320,879.2,879.2,0],[1792055220,879.2,879.2,0],[1792056120,878.5,878.5,0],[1792056360,878.5,878.5,0],[1792057020,872.2,872.2,0],[1792057920,872.2,872.2,0],[1792058820,873.1,873.1,0],[1792059720,873.1,873.1,0],[1792060620,877.8,877.8,0],[1792061520,879.1,879.1,0],[1792062420,879.1,879.1,0],[1792063320,881.5,881.5,0],[1792063500,881.5,881.5,0],[1792064220,881.4,881.4,0],[1792065120,882.8,882.8,0],[1792066020,883.5,883.5,0],[1792066920,885.8,885.8,0],[1792067820,890.4,890.4,0],[1792068720,894.2,894.2,0],[1792069620,897.2,897.2,0],[1792070460,898.8,898.8,0],[1792070520,898.8,898.8,0],[1792071420,903.0,903.0,0],[1792072320,904.6,904.6,0],[1792073220,903.0,918.7,1],[1792074120,902.4,902.4,0],[1792074360,902.4,902.4,0],[1792075020,903.9,903.9,0],[1792075920,910.6,910.6,0],[1792076820,917.7,917.7,0],[1792077720,907.9,907.9,0],[1792077780,907.9,907.9,0],[1792078620,936.5,936.5,0],[1792079520,936.5,936.5,0],[1792080420,936.5,936.5,0],[1792081260,936.5,936.5,0],[1792081320,936.5,936.5,0],[1792082220,936.5,936.5,0],[1792083120,936.5,936.5,0],[1792084020,936.5,936.5,0],[1792084920,936.5,936.5,0],[1792085040,936.5,936.5,0],[1792085820,936.5,936.5,0],[1792086720,935.0,935.0,0],[1792087620,935.0,935.0,0],[1792088520,935.0,935.0,0],[1792089420,921.1,921.1,0],[1792090320,921.1,921.1,0],[1792091220,921.1,921.1,0],[1792092120,921.1,921.1,0],[1792092240,921.1,921.1,0],[1792093020,921.1,921.1,0],[1792093920,921.1,921.1,0],[1792094820,921.1,921.1,0],[1792095720,921.1,921.1,0],[1792095840,921.1,921.1,0],[1792096620,921.1,921.1,0],[1792097520,921.1,921.1,0],[1792098420,921.1,921.1,0],[1792099320,921.1,921.1,0],[1792099380,921.1,921.1,0],[1792100220,921.1,921.1,0],[1792101120,921.1,921.1,0],[1792102020,921.1,921.1,0],[1792102920,921.1,921.1,0],[1792103220,921.1,921.1,0],[1792103820,920.5,920.5,0],[1792104720,920.5,920.5,0],[1792105620,920.5,920.5,0],[1792106520,919.4,919.4,0],[1792107420,919.4,919.4,0],[1792108320,919.4,919.4,0],[1792109220,910.3,910.3,0],[1792110120,908.2,908.2,0],[1792110240,899.0,899.0,0],[1792111020,890.4,890.4,0],[1792111920,889.8,889.8,0],[1792112820,888.0,888.0,0],[1792113720,886.3,886.3,0],[1792113900,886.3,886.3,0],[1792114620,882.9,882.9,0],[1792115520,882.5,882.5,0],[1792116420,882.5,882.5,0],[1792117320,882.9,882.9,0],[1792117560,882.9,882.9,0],[1792118220,885.7,885.7,0],[1792119120,891.8,891.8,0],[1792120020,894.9,894.9,0],[1792120920,895.7,895.7,0],[1792121040,896.2,896.2,0],[1792121820,896.5,896.5,0],[1792122720,896.2,896.2,0],[1792123620,896.2,896.2,0],[1792124520,896.7,896.7,0],[1792125420,897.1,897.1,0],[1792126320,899.8,899.8,0],[1792127220,899.8,899.8,0],[1792128120,900.5,900.5,0],[1792128360,900.5,900.5,0],[1792129020,900.5,900.5,0],[1792129920,900.5,900.5,0],[1792130820,901.1,901.1,0],[1792131720,901.1,901.1,0],[1792131840,901.1,901.1,0],[1792132620,901.1,901.1,0],[1792133520,901.1,901.1,0],[1792134420,902.6,902.6,0],[1792135320,902.6,902.6,0],[1792136220,902.6,902.6,0],[1792137120,902.6,902.6,0],[1792138020,902.6,902.6,0],[1792138920,903.1,903.1,0],[1792139160,903.1,903.1,0],[1792139820,903.1,903.1,0],[1792140720,903.3,903.3,0],[1792141620,903.1,903.1,0],[1792142520,902.9,902.9,0],[1792142760,903.1,903.1,0],[1792143420,903.2,903.2,0],[1792144320,905.3,905.3,0],[1792145220,906.9,906.9,0],[1792146120,908.2,908.2,0],[1792146180,908.2,908.2,0],[1792147020,911.0,911.0,0],[1792147920,911.0,911.0,0],[1792148820,909.9,909.9,0],[1792149720,909.4,909.4,0],[1792150620,909.0,909.0,0],[1792151520,909.5,909.5,0],[1792152420,915.6,915.6,0],[1792153320,917.1,917.1,0],[1792153620,917.1,917.1,0],[1792154220,917.7,917.7,0],[1792155120,923.3,923.3,0],[1792156020,932.2,932.2,0],[1792156860,938.5,938.5,0],[1792156920,938.5,938.5,0],[1792157820,939.1,939.1,0],[1792158720,939.2,939.2,0],[1792159620,939.6,939.6,0],[1792160520,943.0,943.0,0],[1792160580,943.0,943.0,0],[1792161420,943.3,943.3,0],[1792162320,944.9,944.9,0],[1792163220,945.5,945.5,0],[1792164120,941.1,941.1,0],[1792164300,940.8,940.8,0],[1792165020,934.8,934.8,0],[1792165920,943.9,943.9,0],[1792166820,937.2,937.2,0],[1792167660,939.5,939.5,0],[1792167720,939.5,939.5,0],[1792168620,933.9,933.9,0],[1792169520,935.9,935.9,0],[1792170420,943.3,943.3,0],[1792171320,943.7,943.7,0],[1792172220,943.7,943.7,0],[1792173120,943.7,943.7,0],[1792174020,943.7,943.7,0],[1792174380,944.5,944.5,0],[1792174920,944.5,944.5,0]],"est":[[1789471320,1279.5],[1789471680,1279.5],[1789484400,1322.5],[1789513200,1253.5],[1789531200,1288.5],[1789552800,1365.5],[1789570800,1429.4],[1789599600,1430.4],[1789617600,1438.4],[1789639200,1505.4],[1789657200,1537.4],[1789686000,1504.4],[1789704000,1534.4],[1789725600,1472.4],[1789743600,1481.4],[1789772400,1472.4],[1789790400,1494.4],[1789812000,1472.4],[1789830060,1481.4],[1789858800,1472.4],[1789869240,1487.4],[1789876800,1487.4],[1789898400,1492.4],[1789916400,1492.4],[1789945200,1492.4],[1789963200,1497.4],[1789966860,1497.4],[1789984800,1487.4],[1790002800,1481.4],[1790031600,1451.4],[1790049600,1332.5],[1790071200,1412.5],[1790089200,1442.4],[1790118000,1386.5],[1790136000,1447.4],[1790157600,1477.4],[1790175600,1488.4],[1790204400,1472.4],[1790222400,1488.4],[1790244000,1516.4],[1790262000,1488.4],[1790290860,1461.4],[1790308800,1458.4],[1790330400,1507.4],[1790348400,1505.4],[1790377200,1505.4],[1790395200,1506.4],[1790416800,1517.4],[1790434800,1506.4],[1790463600,1506.4],[1790481600,1507.4],[1790503200,1495.4],[1790521200,1506.4],[1790550000,1475.4],[1790568000,1476.4],[1790589600,1449.4],[1790607600,1459.4],[1790636400,1464.4],[1790654400,1467.4],[1790676000,1467.4],[1790694000,1452.4],[1790722800,1408.5],[1790735940,1121.6],[1790740800,1075.6],[1790762400,1240.5],[1790780400,1207.5],[1790809200,1136.6],[1790827200,1162.5],[1790848800,1170.5],[1790866800,1189.5],[1790895600,1197.5],[1790913600,1209.5],[1790935200,1223.5],[1790953200,1237.5],[1790982000,1244.5],[1791000000,1259.5],[1791021600,1306.5],[1791039600,1318.5],[1791068400,1327.5],[1791086400,1340.5],[1791108000,1362.5],[1791126000,1402.5],[1791154800,1369.5],[1791172800,1369.5],[1791194400,1378.5],[1791212400,1384.5],[1791241200,1369.5],[1791259200,1363.5],[1791280800,1363.5],[1791298800,1365.5],[1791327600,1315.5],[1791345600,1137.6],[1791367200,1152.6],[1791385200,1114.6],[1791414000,1096.6],[1791432000,1107.6],[1791453600,1097.6],[1791471600,1098.6],[1791500400,1052.6],[1791518400,1053.6],[1791540000,964.6],[1791558000,1035.6],[1791586800,964.6],[1791604800,962.6],[1791626400,953.6],[1791644400,966.6],[1791673200,962.6],[1791691200,863.7],[1791712800,912.6],[1791730800,962.6],[1791759600,946.6],[1791777600,971.6],[1791799200,999.6],[1791817200,994.6],[1791846000,994.6],[1791864000,998.6],[1791885600,998.6],[1791903600,975.6],[1791932400,963.6],[1791950400,930.6],[1791972000,942.6]]}</script>
-<script>window.DD373WINDOWS=[{"id":"24h","label":"24 小時","span":86400,"color":"#e74c3c","gapReal":1800,"gapEst":43200},{"id":"48h","label":"48 小時","span":172800,"color":"#d35400","gapReal":1800,"gapEst":43200},{"id":"7d","label":"7 天","span":604800,"color":"#e67e22","gapReal":1800,"gapEst":43200},{"id":"30d","label":"30 天","span":2592000,"color":"#c0392b","gapReal":1800,"gapEst":43200}];</script>
+<script type="application/json" id="chart-data">{"now":1792175761,"r":0.99961,"real":[[1791975660,945.3,945.3,0],[1791976080,944.0,944.0,0],[1791977580,942.6,942.6,0],[1791977820,942.6,942.6,0],[1791978720,944.0,944.0,0],[1791979620,944.9,944.9,0],[1791980520,945.1,945.1,0],[1791980760,944.3,944.3,0],[1791981420,945.4,945.4,0],[1791981720,939.5,939.5,0],[1791981780,939.5,939.5,0],[1791982320,937.5,937.5,0],[1791983220,942.3,942.3,0],[1791983280,942.3,942.3,0],[1791984120,941.9,941.9,0],[1791984180,941.9,941.9,0],[1791985020,937.3,937.3,0],[1791985920,928.2,928.2,0],[1791986820,928.3,928.3,0],[1791987720,930.7,930.7,0],[1791987840,930.7,930.7,0],[1791988620,928.8,928.8,0],[1791989520,930.2,930.2,0],[1791990420,934.9,934.9,0],[1791991320,940.1,940.1,0],[1791991440,940.1,940.1,0],[1791992220,942.5,942.5,0],[1791993120,943.6,943.6,0],[1791994020,949.7,949.7,0],[1791994920,949.7,949.7,0],[1791995160,947.1,947.1,0],[1791995820,946.1,946.1,0],[1791996720,942.6,942.6,0],[1791997620,944.0,950.6,1],[1791998520,944.0,944.0,0],[1791998760,944.0,944.0,0],[1791999420,942.4,942.4,0],[1792000320,942.4,942.4,0],[1792001220,942.4,942.4,0],[1792002120,936.3,936.3,0],[1792003020,936.3,936.3,0],[1792003920,937.3,937.3,0],[1792004820,937.9,937.9,0],[1792005660,937.9,937.9,0],[1792005720,937.9,937.9,0],[1792006620,936.3,936.3,0],[1792007520,936.3,936.3,0],[1792008420,936.3,936.3,0],[1792009260,936.3,936.3,0],[1792009320,936.3,936.3,0],[1792010220,936.3,936.3,0],[1792011120,936.3,936.3,0],[1792012020,936.3,936.3,0],[1792012920,936.3,936.3,0],[1792013820,936.3,936.3,0],[1792014720,936.3,936.3,0],[1792015620,933.9,933.9,0],[1792016520,933.7,933.7,0],[1792017420,933.7,933.7,0],[1792018320,933.7,933.7,0],[1792019220,933.7,933.7,0],[1792020120,933.7,933.7,0],[1792020420,933.7,933.7,0],[1792021020,933.7,933.7,0],[1792021920,933.7,933.7,0],[1792022820,933.7,933.7,0],[1792023720,930.0,930.0,0],[1792023780,930.0,930.0,0],[1792024620,930.0,930.0,0],[1792025520,930.0,930.0,0],[1792026420,927.9,927.9,0],[1792027320,927.9,927.9,0],[1792027380,927.9,927.9,0],[1792028220,928.2,928.2,0],[1792029120,928.1,929.0,1],[1792030020,928.1,928.1,0],[1792030920,923.9,923.9,0],[1792031220,923.9,923.9,0],[1792031820,923.9,923.9,0],[1792032720,925.5,925.5,0],[1792033620,926.3,926.3,0],[1792034520,924.6,924.6,0],[1792034640,924.6,924.6,0],[1792035420,929.4,929.4,0],[1792036320,930.8,930.8,0],[1792037220,927.1,927.1,0],[1792038120,925.7,925.7,0],[1792038300,925.7,925.7,0],[1792039020,923.1,923.1,0],[1792039920,923.2,923.2,0],[1792040820,923.7,923.7,0],[1792041720,923.7,928.0,1],[1792041960,924.0,928.0,1],[1792042620,923.7,923.7,0],[1792043520,924.0,924.0,0],[1792044420,924.0,924.0,0],[1792045320,925.1,925.1,0],[1792045500,925.1,925.1,0],[1792046220,924.0,924.0,0],[1792047120,917.1,917.1,0],[1792048020,897.3,897.3,0],[1792048920,907.7,907.7,0],[1792049040,899.2,863.0,1],[1792049820,899.2,899.2,0],[1792050720,901.5,901.5,0],[1792051620,893.1,893.1,0],[1792052460,876.5,876.5,0],[1792052520,876.5,876.5,0],[1792053420,876.1,876.1,0],[1792054320,879.2,879.2,0],[1792055220,879.2,879.2,0],[1792056120,878.5,878.5,0],[1792056360,878.5,878.5,0],[1792057020,872.2,872.2,0],[1792057920,872.2,872.2,0],[1792058820,873.1,873.1,0],[1792059720,873.1,873.1,0],[1792060620,877.8,877.8,0],[1792061520,879.1,879.1,0],[1792062420,879.1,879.1,0],[1792063320,881.5,881.5,0],[1792063500,881.5,881.5,0],[1792064220,881.4,881.4,0],[1792065120,882.8,882.8,0],[1792066020,883.5,883.5,0],[1792066920,885.8,885.8,0],[1792067820,890.4,890.4,0],[1792068720,894.2,894.2,0],[1792069620,897.2,897.2,0],[1792070460,898.8,898.8,0],[1792070520,898.8,898.8,0],[1792071420,903.0,903.0,0],[1792072320,904.6,904.6,0],[1792073220,903.0,918.7,1],[1792074120,902.4,902.4,0],[1792074360,902.4,902.4,0],[1792075020,903.9,903.9,0],[1792075920,910.6,910.6,0],[1792076820,917.7,917.7,0],[1792077720,907.9,907.9,0],[1792077780,907.9,907.9,0],[1792078620,936.5,936.5,0],[1792079520,936.5,936.5,0],[1792080420,936.5,936.5,0],[1792081260,936.5,936.5,0],[1792081320,936.5,936.5,0],[1792082220,936.5,936.5,0],[1792083120,936.5,936.5,0],[1792084020,936.5,936.5,0],[1792084920,936.5,936.5,0],[1792085040,936.5,936.5,0],[1792085820,936.5,936.5,0],[1792086720,935.0,935.0,0],[1792087620,935.0,935.0,0],[1792088520,935.0,935.0,0],[1792089420,921.1,921.1,0],[1792090320,921.1,921.1,0],[1792091220,921.1,921.1,0],[1792092120,921.1,921.1,0],[1792092240,921.1,921.1,0],[1792093020,921.1,921.1,0],[1792093920,921.1,921.1,0],[1792094820,921.1,921.1,0],[1792095720,921.1,921.1,0],[1792095840,921.1,921.1,0],[1792096620,921.1,921.1,0],[1792097520,921.1,921.1,0],[1792098420,921.1,921.1,0],[1792099320,921.1,921.1,0],[1792099380,921.1,921.1,0],[1792100220,921.1,921.1,0],[1792101120,921.1,921.1,0],[1792102020,921.1,921.1,0],[1792102920,921.1,921.1,0],[1792103220,921.1,921.1,0],[1792103820,920.5,920.5,0],[1792104720,920.5,920.5,0],[1792105620,920.5,920.5,0],[1792106520,919.4,919.4,0],[1792107420,919.4,919.4,0],[1792108320,919.4,919.4,0],[1792109220,910.3,910.3,0],[1792110120,908.2,908.2,0],[1792110240,899.0,899.0,0],[1792111020,890.4,890.4,0],[1792111920,889.8,889.8,0],[1792112820,888.0,888.0,0],[1792113720,886.3,886.3,0],[1792113900,886.3,886.3,0],[1792114620,882.9,882.9,0],[1792115520,882.5,882.5,0],[1792116420,882.5,882.5,0],[1792117320,882.9,882.9,0],[1792117560,882.9,882.9,0],[1792118220,885.7,885.7,0],[1792119120,891.8,891.8,0],[1792120020,894.9,894.9,0],[1792120920,895.7,895.7,0],[1792121040,896.2,896.2,0],[1792121820,896.5,896.5,0],[1792122720,896.2,896.2,0],[1792123620,896.2,896.2,0],[1792124520,896.7,896.7,0],[1792125420,897.1,897.1,0],[1792126320,899.8,899.8,0],[1792127220,899.8,899.8,0],[1792128120,900.5,900.5,0],[1792128360,900.5,900.5,0],[1792129020,900.5,900.5,0],[1792129920,900.5,900.5,0],[1792130820,901.1,901.1,0],[1792131720,901.1,901.1,0],[1792131840,901.1,901.1,0],[1792132620,901.1,901.1,0],[1792133520,901.1,901.1,0],[1792134420,902.6,902.6,0],[1792135320,902.6,902.6,0],[1792136220,902.6,902.6,0],[1792137120,902.6,902.6,0],[1792138020,902.6,902.6,0],[1792138920,903.1,903.1,0],[1792139160,903.1,903.1,0],[1792139820,903.1,903.1,0],[1792140720,903.3,903.3,0],[1792141620,903.1,903.1,0],[1792142520,902.9,902.9,0],[1792142760,903.1,903.1,0],[1792143420,903.2,903.2,0],[1792144320,905.3,905.3,0],[1792145220,906.9,906.9,0],[1792146120,908.2,908.2,0],[1792146180,908.2,908.2,0],[1792147020,911.0,911.0,0],[1792147920,911.0,911.0,0],[1792148820,909.9,909.9,0],[1792149720,909.4,909.4,0],[1792150620,909.0,909.0,0],[1792151520,909.5,909.5,0],[1792152420,915.6,915.6,0],[1792153320,917.1,917.1,0],[1792153620,917.1,917.1,0],[1792154220,917.7,917.7,0],[1792155120,923.3,923.3,0],[1792156020,932.2,932.2,0],[1792156860,938.5,938.5,0],[1792156920,938.5,938.5,0],[1792157820,939.1,939.1,0],[1792158720,939.2,939.2,0],[1792159620,939.6,939.6,0],[1792160520,943.0,943.0,0],[1792160580,943.0,943.0,0],[1792161420,943.3,943.3,0],[1792162320,944.9,944.9,0],[1792163220,945.5,945.5,0],[1792164120,941.1,941.1,0],[1792164300,940.8,940.8,0],[1792165020,934.8,934.8,0],[1792165920,943.9,943.9,0],[1792166820,937.2,937.2,0],[1792167660,939.5,939.5,0],[1792167720,939.5,939.5,0],[1792168620,933.9,933.9,0],[1792169520,935.9,935.9,0],[1792170420,943.3,943.3,0],[1792171320,943.7,943.7,0],[1792172220,943.7,943.7,0],[1792173120,943.7,943.7,0],[1792174020,943.7,943.7,0],[1792174380,944.5,944.5,0],[1792174920,944.5,944.5,0]],"est":[[1789471320,1279.5],[1789471680,1279.5],[1789484400,1322.5],[1789513200,1253.5],[1789531200,1288.5],[1789552800,1365.5],[1789570800,1429.4],[1789599600,1430.4],[1789617600,1438.4],[1789639200,1505.4],[1789657200,1537.4],[1789686000,1504.4],[1789704000,1534.4],[1789725600,1472.4],[1789743600,1481.4],[1789772400,1472.4],[1789790400,1494.4],[1789812000,1472.4],[1789830060,1481.4],[1789858800,1472.4],[1789869240,1487.4],[1789876800,1487.4],[1789898400,1492.4],[1789916400,1492.4],[1789945200,1492.4],[1789963200,1497.4],[1789966860,1497.4],[1789984800,1487.4],[1790002800,1481.4],[1790031600,1451.4],[1790049600,1332.5],[1790071200,1412.5],[1790089200,1442.4],[1790118000,1386.5],[1790136000,1447.4],[1790157600,1477.4],[1790175600,1488.4],[1790204400,1472.4],[1790222400,1488.4],[1790244000,1516.4],[1790262000,1488.4],[1790290860,1461.4],[1790308800,1458.4],[1790330400,1507.4],[1790348400,1505.4],[1790377200,1505.4],[1790395200,1506.4],[1790416800,1517.4],[1790434800,1506.4],[1790463600,1506.4],[1790481600,1507.4],[1790503200,1495.4],[1790521200,1506.4],[1790550000,1475.4],[1790568000,1476.4],[1790589600,1449.4],[1790607600,1459.4],[1790636400,1464.4],[1790654400,1467.4],[1790676000,1467.4],[1790694000,1452.4],[1790722800,1408.5],[1790735940,1121.6],[1790740800,1075.6],[1790762400,1240.5],[1790780400,1207.5],[1790809200,1136.6],[1790827200,1162.5],[1790848800,1170.5],[1790866800,1189.5],[1790895600,1197.5],[1790913600,1209.5],[1790935200,1223.5],[1790953200,1237.5],[1790982000,1244.5],[1791000000,1259.5],[1791021600,1306.5],[1791039600,1318.5],[1791068400,1327.5],[1791086400,1340.5],[1791108000,1362.5],[1791126000,1402.5],[1791154800,1369.5],[1791172800,1369.5],[1791194400,1378.5],[1791212400,1384.5],[1791241200,1369.5],[1791259200,1363.5],[1791280800,1363.5],[1791298800,1365.5],[1791327600,1315.5],[1791345600,1137.6],[1791367200,1152.6],[1791385200,1114.6],[1791414000,1096.6],[1791432000,1107.6],[1791453600,1097.6],[1791471600,1098.6],[1791500400,1052.6],[1791518400,1053.6],[1791540000,964.6],[1791558000,1035.6],[1791586800,964.6],[1791604800,962.6],[1791626400,953.6],[1791644400,966.6],[1791673200,962.6],[1791691200,863.7],[1791712800,912.6],[1791730800,962.6],[1791759600,946.6],[1791777600,971.6],[1791799200,999.6],[1791817200,994.6],[1791846000,994.6],[1791864000,998.6],[1791885600,998.6],[1791903600,975.6],[1791932400,963.6],[1791950400,930.6],[1791972000,942.6]],"agg":{"7d":[[1791975600,944.0,944.0,0,942.6,945.3,5],[1791979200,944.3,944.3,0,937.5,945.4,7],[1791982800,941.9,941.9,0,928.2,942.3,6],[1791986400,941.9,930.2,1,928.3,930.7,5],[1791990000,940.1,940.1,0,934.9,943.6,5],[1791993600,947.1,947.1,0,942.6,949.7,5],[1791997200,944.0,944.0,0,942.4,950.6,5],[1792000800,936.8,936.8,0,936.3,942.4,4],[1792004400,937.9,937.9,0,936.3,937.9,5],[1792008000,936.3,936.3,0,936.3,936.3,5],[1792011600,936.3,936.3,0,936.3,936.3,4],[1792015200,933.7,933.7,0,933.7,933.9,4],[1792018800,933.7,933.7,0,933.7,933.7,5],[1792022400,930.0,930.0,0,930.0,933.7,5],[1792026000,927.9,927.9,0,927.9,929.0,5],[1792029600,923.9,923.9,0,923.9,928.1,5],[1792033200,926.3,926.3,0,924.6,930.8,5],[1792036800,924.0,925.7,1,923.1,927.1,5],[1792040400,924.0,924.0,0,923.7,928.0,5],[1792044000,924.0,924.0,0,917.1,925.1,5],[1792047600,899.2,899.2,0,863.0,907.7,5],[1792051200,876.5,876.5,0,876.1,893.1,5],[1792054800,878.5,878.5,0,872.2,879.2,5],[1792058400,875.5,875.5,0,873.1,879.1,4],[1792062000,881.5,881.5,0,879.1,882.8,5],[1792065600,888.1,888.1,0,883.5,894.2,4],[1792069200,898.8,898.8,0,897.2,904.6,5],[1792072800,903.9,903.9,0,902.4,918.7,5],[1792076400,917.7,917.7,0,907.9,936.5,5],[1792080000,936.5,936.5,0,936.5,936.5,5],[1792083600,936.5,936.5,0,935.0,936.5,5],[1792087200,928.0,928.0,0,921.1,935.0,4],[1792090800,921.1,921.1,0,921.1,921.1,5],[1792094400,921.1,921.1,0,921.1,921.1,5],[1792098000,921.1,921.1,0,921.1,921.1,5],[1792101600,921.1,921.1,0,920.5,921.1,5],[1792105200,919.4,919.4,0,919.4,920.5,4],[1792108800,899.0,899.0,0,889.8,910.3,5],[1792112400,886.3,886.3,0,882.5,888.0,5],[1792116000,896.2,882.9,1,882.5,891.8,5],[1792119600,896.2,896.2,0,894.9,896.5,5],[1792123200,896.9,896.9,0,896.2,899.8,4],[1792126800,900.5,900.5,0,899.8,900.5,5],[1792130400,901.1,901.1,0,901.1,901.1,5],[1792134000,902.6,902.6,0,902.6,902.6,4],[1792137600,903.1,903.1,0,902.6,903.3,5],[1792141200,903.1,903.1,0,902.9,905.3,5],[1792144800,908.2,908.2,0,906.9,911.0,5],[1792148400,909.5,909.5,0,909.0,909.9,4],[1792152000,917.1,917.1,0,915.6,923.3,5],[1792155600,938.5,938.5,0,932.2,939.2,5],[1792159200,943.0,943.0,0,939.6,944.9,5],[1792162800,941.1,941.1,0,934.8,945.5,5],[1792166400,937.2,937.2,0,933.9,939.5,5],[1792170000,943.7,943.7,0,943.3,943.7,4],[1792173600,944.5,944.5,0,943.7,944.5,3]],"30d":[[1791964800,944.0,944.0,0,942.6,945.3,5],[1791979200,940.1,940.1,0,928.2,945.4,23],[1791993600,942.4,942.4,0,936.3,950.6,19],[1792008000,935.1,935.1,0,933.7,936.3,18],[1792022400,928.0,928.0,0,923.9,933.7,20],[1792036800,923.9,923.9,0,863.0,928.0,20],[1792051200,878.5,878.5,0,872.2,893.1,19],[1792065600,903.0,903.0,0,883.5,936.5,19],[1792080000,935.0,935.0,0,921.1,936.5,19],[1792094400,921.1,921.1,0,919.4,921.1,19],[1792108800,890.1,890.1,0,882.5,910.3,20],[1792123200,900.8,900.8,0,896.2,902.6,18],[1792137600,905.3,905.3,0,902.6,911.0,19],[1792152000,939.2,939.2,0,915.6,945.5,20],[1792166400,943.5,943.5,0,933.9,944.5,12]]},"notes":[{"type":"band","from":1789488000,"to":1790697600,"label":"\u7b2c 2 \u6b21\u79fb\u6c11 9/16\u20139/29"},{"type":"vline","t":1791975660,"label":"\u958b\u59cb\u5be6\u6e2c 10/14 19:01"}]}</script>
+<script>window.DD373_BUILT="2026-10-17T02:36:01";</script>
+<script>window.DD373WINDOWS=[{"id":"24h","label":"24 小時","span":86400,"gapReal":1800,"gapEst":43200},{"id":"48h","label":"48 小時","span":172800,"gapReal":1800,"gapEst":43200},{"id":"7d","label":"7 天","span":604800,"gapReal":1800,"gapEst":43200,"agg":"7d","gapAgg":10800},{"id":"30d","label":"30 天","span":2592000,"gapReal":1800,"gapEst":43200,"agg":"30d","gapAgg":43200}];</script>
 <script>
 /* ============================================================================
    飛馬走勢圖 — 手刻 SVG 渲染器（A 版：含 P0 遺留三修正）
@@ -328,8 +600,19 @@ a{color:#6ab0ff}
     var now = Math.floor(Date.now() / 1000);
     var x1 = now, x0 = now - win.span;
 
-    var real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
+    // 這個窗要用原始點還是降採樣序列？（7 天＝1 小時中位數＋min–max 帶；30 天＝4 小時）
+    var useAgg = !!(win.agg && DATA.agg && DATA.agg[win.agg]);
+    var real, gapReal;
+    if (useAgg) {
+      real = DATA.agg[win.agg].filter(function (r) { return r[0] >= x0 && r[0] <= now; })
+                              .map(function (r) { return { t: r[0], v: r[1], raw: r[2], o: !!r[3],
+                                                           lo: r[4], hi: r[5], n: r[6] }; });
+      gapReal = win.gapAgg || win.gapReal;              // 聚合後：連續幾個時段沒資料才斷線
+    } else {
+      real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
                        .map(function (p) { return { t: p.t, v: p.v, raw: p.raw, o: p.o }; });
+      gapReal = win.gapReal;
+    }
     var est = DATA.est.filter(function (p) { return p.t >= x0 && p.t <= now; })
                       .map(function (p) { return { t: p.t, v: p.v }; });
 
@@ -338,8 +621,10 @@ a{color:#6ab0ff}
       return;
     }
 
-    // Y 範圍：實測（含離群原始值）＋估算
+    // Y 範圍：實測（含離群原始值、min–max 帶）＋估算
     var vals = real.map(function (p) { return p.v; }).concat(real.map(function (p) { return p.raw; }))
+                   .concat(real.map(function (p) { return p.lo === undefined ? p.v : p.lo; }))
+                   .concat(real.map(function (p) { return p.hi === undefined ? p.v : p.hi; }))
                    .concat(est.map(function (p) { return p.v; }));
     var yb = bounds(vals), ys = niceScale(yb[0], yb[1], 5, 0.05);
     var y0 = ys.min, y1 = ys.max;
@@ -359,29 +644,63 @@ a{color:#6ab0ff}
            'font-family="-apple-system,PingFang TC,Microsoft JhengHei,sans-serif" role="img" ' +
            'aria-label="' + esc(win.label + ' 走勢') + '">');
 
-    // 面積填色漸層（由線往下淡出到透明）
+    // 面積填色漸層（由線往下淡出到透明；顏色/透明度由 CSS 的 .stop-top/.stop-bot 決定）
     s.push('<defs><linearGradient id="g_' + win.id + '" gradientUnits="userSpaceOnUse" ' +
            'x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '">' +
-           '<stop offset="0%" stop-color="' + win.color + '" stop-opacity="0.26"/>' +
-           '<stop offset="100%" stop-color="' + win.color + '" stop-opacity="0"/></linearGradient></defs>');
+           '<stop class="stop-top" offset="0%"/><stop class="stop-bot" offset="100%"/></linearGradient></defs>');
+
+    // 圖上註記：背景色帶（例：第 2 次移民期）先畫，格線與資料線疊在上面
+    (DATA.notes || []).forEach(function (nt) {
+      if (nt.type !== 'band' || nt.to <= x0 || nt.from >= x1) return;
+      var bx0 = X(Math.max(nt.from, x0)), bx1 = X(Math.min(nt.to, x1));
+      s.push('<rect class="note-band" x="' + bx0.toFixed(1) + '" y="' + pd.t +
+             '" width="' + Math.max(bx1 - bx0, 1).toFixed(1) + '" height="' + ih + '"/>');
+      if (bx1 - bx0 > 60) {
+        s.push('<text class="note-txt" x="' + (bx0 + 4).toFixed(1) + '" y="' + (pd.t + 11) +
+               '" text-anchor="start">' + nt.label + '</text>');
+      }
+    });
 
     // 格線＋Y 標籤
     ys.ticks.forEach(function (v) {
       var yy = Y(v);
-      s.push('<line x1="' + pd.l + '" y1="' + yy.toFixed(1) + '" x2="' + (pd.l + iw) + '" y2="' + yy.toFixed(1) +
-             '" stroke="#2a3441" stroke-width="1"/>');
-      s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) + '" font-size="' + FONT +
-             '" fill="#7f8c9b" text-anchor="end">' + num(v) + '</text>');
+      s.push('<line class="grid" x1="' + pd.l + '" y1="' + yy.toFixed(1) + '" x2="' + (pd.l + iw) + '" y2="' + yy.toFixed(1) + '"/>');
+      s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) +
+             '" text-anchor="end">' + num(v) + '</text>');
     });
+
+    // 圖上註記：垂直虛線標記（例：開始實測）
+    (DATA.notes || []).forEach(function (nt) {
+      if (nt.type !== 'vline' || nt.t < x0 || nt.t > x1) return;
+      var vx = X(nt.t), near = vx > pd.l + iw - 60;
+      s.push('<line class="note-line" x1="' + vx.toFixed(1) + '" y1="' + pd.t +
+             '" x2="' + vx.toFixed(1) + '" y2="' + (pd.t + ih) + '"/>');
+      s.push('<text class="note-txt" x="' + (near ? vx - 4 : vx + 4).toFixed(1) + '" y="' + (pd.t + 23) +
+             '" text-anchor="' + (near ? 'end' : 'start') + '">' + nt.label + '</text>');
+    });
+
+    // min–max 淡色帶（只有降採樣的窗有）
+    if (useAgg && real.length >= 2) {
+      segments(real, gapReal).forEach(function (seg) {
+        if (seg.length < 2) return;
+        var up = seg.map(function (p, i) {
+          return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.hi).toFixed(1);
+        }).join(' ');
+        var dn = seg.slice().reverse().map(function (p) {
+          return 'L' + X(p.t).toFixed(1) + ',' + Y(p.lo).toFixed(1);
+        }).join(' ');
+        s.push('<path class="band" d="' + up + ' ' + dn + ' Z"/>');
+      });
+    }
 
     // 面積填色：只涵蓋實測資料本身（第一筆→最後一筆），不從左緣起畫
     if (real.length >= 2) {
-      segments(real, win.gapReal).forEach(function (seg) {
+      segments(real, gapReal).forEach(function (seg) {
         if (seg.length < 2) return;
         var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
         d += ' L' + X(seg[seg.length - 1].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) +
              ' L' + X(seg[0].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) + ' Z';
-        s.push('<path d="' + d + '" fill="url(#g_' + win.id + ')" stroke="none"/>');
+        s.push('<path class="area" d="' + d + '" fill="url(#g_' + win.id + ')" stroke="none"/>');
       });
     }
 
@@ -389,22 +708,19 @@ a{color:#6ab0ff}
     segments(est, win.gapEst).forEach(function (seg) {
       if (seg.length < 2) return;
       var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
-      s.push('<path d="' + d + '" fill="none" stroke="#7f8c9b" stroke-width="' + LW_EST + '" ' +
-             'stroke-dasharray="5 4" opacity="0.8"/>');
+      s.push('<path class="line-est" d="' + d + '"/>');
     });
 
     // 實測線
-    segments(real, win.gapReal).forEach(function (seg) {
+    segments(real, gapReal).forEach(function (seg) {
       var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
-      s.push('<path d="' + d + '" fill="none" stroke="' + win.color + '" stroke-width="' + LW +
-             '" stroke-linejoin="round" stroke-linecap="round"/>');
+      s.push('<path class="line-real" d="' + d + '"/>');
     });
 
     // 離群點：空心小點（原始值位置）
     real.forEach(function (p) {
       if (!p.o) return;
-      s.push('<circle cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.raw).toFixed(1) + '" r="3.4" fill="none" ' +
-             'stroke="' + win.color + '" stroke-width="1.6"/>');
+      s.push('<circle class="outlier" cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.raw).toFixed(1) + '" r="3.4"/>');
     });
 
     // X 標籤（台北整點／週一對齊）
@@ -415,30 +731,166 @@ a{color:#6ab0ff}
       var anchor = 'middle';
       if (cx - est / 2 < 2) anchor = 'start';
       else if (cx + est / 2 > w - 2) anchor = 'end';
-      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) + '" font-size="' + FONT +
-             '" fill="#7f8c9b" text-anchor="' + anchor + '">' + txt + '</text>');
+      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) +
+             '" text-anchor="' + anchor + '">' + txt + '</text>');
     });
 
-    // 最新值標籤：貼在右側 Y 軸上（整數）
-    var last = real.length ? real[real.length - 1] : null;
-    if (last) {
-      var ly = Y(last.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
-      ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
-      s.push('<rect x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw + '" height="' + bh +
-             '" rx="4" fill="' + win.color + '"/>');
-      s.push('<text x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) + '" font-size="' + FONT_BADGE +
-             '" font-weight="700" fill="#0f1419" text-anchor="middle">' + num(last.v) + '</text>');
+    // 最新值標籤：貼在右側 Y 軸上（一律用最新的「原始實測點」，四個窗才會跟 Hero 一致）
+    var latest = null, li;
+    for (li = DATA.real.length - 1; li >= 0; li--) {
+      if (DATA.real[li].t <= now && DATA.real[li].t >= x0) { latest = DATA.real[li]; break; }
     }
+    if (!latest && real.length) latest = real[real.length - 1];
+    if (latest) {
+      var ly = Y(latest.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
+      ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
+      s.push('<rect class="badge" x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw +
+             '" height="' + bh + '" rx="6"/>');
+      s.push('<text class="badge-t" x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) +
+             '" text-anchor="middle">' + num(latest.v) + '</text>');
+    }
+
+    // 十字線圖層（hover 時只更新這一層，不重繪整張圖）
+    s.push('<g class="cross-g" visibility="hidden">' +
+           '<line class="cross" x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '"/>' +
+           '<circle class="cross-dot" cx="0" cy="0" r="4"/></g>');
 
     s.push('</svg>');
     host.innerHTML = s.join('');
 
-    CHARTS[win.id] = { host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih, x0: x0, x1: x1,
-                       y0: y0, y1: y1, X: X, Y: Y, real: real, est: est, step: step, plan: plan };
+    // hover 用的合併序列（實測＋估算，依時間排序；估算本來就在實測之前）
+    var hoverPts = est.map(function (p) { return { t: p.t, v: p.v, raw: p.v, o: false, src: 'est' }; })
+                      .concat(real.map(function (p) {
+                        return { t: p.t, v: p.v, raw: p.raw, o: p.o, src: 'real',
+                                 lo: p.lo, hi: p.hi, n: p.n };
+                      }))
+                      .sort(function (a, b) { return a.t - b.t; });
+
+    CHARTS[win.id] = { win: win, host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih,
+                       x0: x0, x1: x1, y0: y0, y1: y1, X: X, Y: Y, real: real, est: est,
+                       hoverPts: hoverPts, step: step, plan: plan, useAgg: useAgg,
+                       aggLabel: useAgg ? (win.agg === '7d' ? '1 小時' : '4 小時') : null };
+
+    updateSummary(win, CHARTS[win.id]);
 
     // 標籤量測保險：實際文字框若還重疊 → 隔一個標重畫（最多 3 輪）
     if (fitLabels(win, CHARTS[win.id], depth || 0)) return;
+    attachHover(win, CHARTS[win.id]);
     if (window.DD373AfterRender) window.DD373AfterRender(win, CHARTS[win.id]);
+  }
+
+  /* ---------- 本時窗摘要（圖上方一行） ---------- */
+  function updateSummary(win, st) {
+    var el = document.querySelector('.wsum[data-win="' + win.id + '"]');
+    if (!el) return;
+    var pts = st.hoverPts;
+    if (pts.length < 2) { el.innerHTML = ''; return; }
+    var first = pts[0], last = pts[pts.length - 1];
+    var vals = pts.map(function (p) { return p.v; });
+    var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
+    var chg = (last.v / first.v - 1) * 100;
+    var arrow = chg > 0.05 ? '▲' : (chg < -0.05 ? '▼' : '—');
+    var hasEst = pts.some(function (p) { return p.src === 'est'; });
+    el.innerHTML = '本時窗 ' + arrow + ' ' + (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%' +
+                   '　高 <b>' + num(hi) + '</b>　低 <b>' + num(lo) + '</b>' +
+                   (hasEst ? '　<span class="tag">含估算</span>' : '');
+  }
+
+  /* ---------- 十字線＋tooltip（pointer events：滑鼠／觸控共用） ---------- */
+  function attachHover(win, st) {
+    var host = st.host;
+    // 注意：render() 會用 innerHTML 重畫整張圖，tooltip 元素會被清掉 → 每次都要確認它還掛在 DOM 上
+    if (!host.__tt) {
+      host.__tt = document.createElement('div');
+      host.__tt.className = 'tt';
+    }
+    if (host.__tt.parentNode !== host) host.appendChild(host.__tt);
+    if (!host.__bound) {
+      host.__bound = true;
+      host.addEventListener('pointerdown', function (e) {
+        host.__pressed = true;
+        hoverAt(win, e);
+      });
+      host.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'mouse' || host.__pressed) hoverAt(win, e);
+      });
+      host.addEventListener('pointerup', function () { host.__pressed = false; });   // 觸控：放開後保留
+      host.addEventListener('pointerleave', function (e) {
+        if (e.pointerType === 'mouse') hideHover(win);
+      });
+      document.addEventListener('pointerdown', function (e) {                        // 點別處才收起來
+        if (!host.contains(e.target)) hideHover(win);
+      }, true);
+    }
+  }
+
+  function hideHover(win) {
+    var st = CHARTS[win.id];
+    if (!st) return;
+    var g = st.host.querySelector('g.cross-g');
+    if (g) g.setAttribute('visibility', 'hidden');
+    if (st.host.__tt) st.host.__tt.classList.remove('on');
+  }
+
+  function hoverAt(win, ev) {
+    var st = CHARTS[win.id];
+    if (!st || !st.hoverPts.length) return;
+    var host = st.host, tt = host.__tt;
+    var rect = host.getBoundingClientRect();
+    var px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+
+    // 找最近的點；若附近 4px 內有離群點則優先吸附到它（空心圈半徑 3.4px，手指點得到，
+    // 這樣「10/15 的 863 原始值」在手機上也查得到 —— 否則要精準命中 0.1px 內才看得到）
+    var best = null, bestD = Infinity, outBest = null, outD = Infinity, i, d;
+    for (i = 0; i < st.hoverPts.length; i++) {
+      d = Math.abs(st.X(st.hoverPts[i].t) - px);
+      if (d < bestD) { bestD = d; best = i; }
+      if (st.hoverPts[i].o && d < outD) { outD = d; outBest = i; }
+    }
+    if (outBest !== null && outD <= 4) best = outBest;
+    if (!best && best !== 0) return;
+    var p = st.hoverPts[best], prev = best > 0 ? st.hoverPts[best - 1] : null;
+
+    var g = host.querySelector('g.cross-g');
+    var cx = st.X(p.t), cy = st.Y(p.v);
+    if (g) {
+      g.setAttribute('visibility', 'visible');
+      var ln = g.querySelector('line.cross');
+      ln.setAttribute('x1', cx.toFixed(1)); ln.setAttribute('x2', cx.toFixed(1));
+      var dot = g.querySelector('circle.cross-dot');
+      dot.setAttribute('cx', cx.toFixed(1)); dot.setAttribute('cy', cy.toFixed(1));
+    }
+
+    // 顯示的數值：離群點顯示原始值（主線畫的是平滑後的中位數）
+    var shown = p.o ? p.raw : p.v;
+    var prevV = prev ? (prev.o ? prev.raw : prev.v) : null;
+    var diff = prev ? shown - prevV : null;
+    var pct = prevV ? diff / prevV * 100 : null;
+    var difftxt;
+    if (diff === null) {
+      difftxt = '';
+    } else if (Math.abs(diff) < 0.5) {
+      difftxt = '較前一筆 ±0（' + (pct === null ? '0.0' : pct.toFixed(1)) + '%）';
+    } else {
+      difftxt = '較前一筆 ' + (diff > 0 ? '▲ +' : '▼ −') + num(Math.abs(diff)) +
+                (pct === null ? '' : '（' + (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%）');
+    }
+    tt.innerHTML =
+      '<div class="t1">' + fmtFull(p.t) + '</div>' +
+      '<div class="v">' + num(shown) + ' 天幣/元</div>' +
+      (difftxt ? '<div>' + difftxt + '</div>' : '') +
+      '<div class="src">來源：' + (p.src === 'real' ? '實測' : '估算') +
+      (p.n ? '（' + (st.aggLabel || '') + '中位數・' + p.n + ' 筆；區間 ' + num(p.lo) + '–' + num(p.hi) + '）'
+           : (p.o ? '（離群點・原始值；主線為中位數 ' + num(p.v) + '）' : '')) + '</div>';
+    tt.classList.add('on');
+
+    var tw = tt.offsetWidth, th = tt.offsetHeight;
+    var left = cx + 12;
+    if (left + tw > st.w - 4) left = cx - tw - 12;
+    if (left < 4) left = 4;
+    var top = Math.min(Math.max(py - th - 10, 4), st.h - th - 4);
+    tt.style.left = left.toFixed(1) + 'px';
+    tt.style.top = top.toFixed(1) + 'px';
   }
 
   function fitLabels(win, st, depth) {
@@ -496,6 +948,13 @@ a{color:#6ab0ff}
     Array.prototype.forEach.call(document.querySelectorAll('input[name=tr]'), function (r) {
       r.addEventListener('change', function () { setTimeout(renderAll, 0); });
     });
+    // 系統深／淺色切換 → 重繪（顏色雖然都走 CSS 變數，重繪可確保 tooltip 量測與尺寸一致）
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onScheme = function () { setTimeout(renderAll, 0); };
+      if (mq.addEventListener) mq.addEventListener('change', onScheme);
+      else if (mq.addListener) mq.addListener(onScheme);
+    }
   }
 
   window.DD373TREND = { boot: boot, renderAll: renderAll, render: render, charts: CHARTS,
@@ -506,6 +965,205 @@ a{color:#6ab0ff}
                         fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS };
 
   var WINCFG = window.DD373WINDOWS || [];
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script><script>
+/* ============================================================================
+   天幣幣值頁 — 行為層（D 階段）
+     1) 時間會動：所有 [data-ts] 每 60 秒重算「N 分鐘前」；膠囊依新鮮度轉 --warn／--bad，
+        超過 60 分鐘另外在頁首顯示「資料已停更」橫幅
+     2) 分頁可見時每 5 分鐘檢查 version.json：有新資料才整頁重新載入
+        三個保護：① built 真的變新 ② 最近 60 秒有操作就不打斷 ③ tooltip 開著就不打斷
+     3) 記住上次選的時間窗（localStorage）；details 展開狀態與捲動位置（sessionStorage）
+     4) 預覽版專用測試參數（正式版沒有 window.DD373_PREVIEW，一律忽略）
+          ?now=2026-10-17T04:00   假裝現在時間（驗「資料延遲」膠囊與「停更」橫幅）
+          ?poll=15                把 5 分鐘檢查改成 15 秒
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var PREVIEW = !!window.DD373_PREVIEW;
+  var Q = {};
+  try { Q = new URLSearchParams(location.search); } catch (e) { }
+  function qget(k) { try { return Q.get(k); } catch (e) { return null; } }
+
+  // ---------- 現在時間（預覽可用 ?now= 假造） ----------
+  function previewNowMs() {
+    if (!PREVIEW) return null;
+    var v = qget('now');
+    if (!v) return null;
+    var ms = Date.parse(v.length <= 16 ? v + '+08:00' : v);       // 沒帶時區就當台北時間
+    return isNaN(ms) ? null : ms;
+  }
+  var FAKE_NOW = previewNowMs();
+  function nowMs() { return FAKE_NOW || Date.now(); }
+  function pollMs() {
+    var s = PREVIEW ? parseInt(qget('poll') || '0', 10) : 0;
+    return s > 0 ? s * 1000 : 5 * 60 * 1000;
+  }
+
+  /* ---------- 1) 相對時間／新鮮度 ---------- */
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function tp(ms) {
+    var d = new Date(ms + 8 * 3600 * 1000);                       // 台北時間
+    return { M: d.getUTCMonth() + 1, D: d.getUTCDate(), h: d.getUTCHours(), m: d.getUTCMinutes() };
+  }
+  function fmtAbs(tsSec) { var p = tp(tsSec * 1000); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
+  function ageMin(tsSec) { return Math.floor((nowMs() - tsSec * 1000) / 60000); }
+  function relText(min) {
+    if (min < 1) return '剛剛';
+    if (min < 60) return min + ' 分鐘前';
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '') + '前';
+  }
+  function durText(min) {                                          // 經過時間（不帶「前」）
+    if (min < 1) return '不到 1 分鐘';
+    if (min < 60) return min + ' 分鐘';
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '');
+  }
+  function freshState(min) {                                       // 資料新鮮度：ok／warn／bad
+    if (min <= 30) return { cls: '', txt: relText(min) };
+    if (min <= 60) return { cls: 'warn', txt: '資料延遲' };
+    return { cls: 'bad', txt: '已停更 ' + durText(min) };
+  }
+
+  function updateTimes() {
+    var nodes = document.querySelectorAll('[data-ts][data-rel="1"]'), i, el, min;
+    for (i = 0; i < nodes.length; i++) {
+      el = nodes[i];
+      el.textContent = relText(ageMin(parseInt(el.getAttribute('data-ts'), 10)));
+    }
+    var cap = document.querySelector('[data-fresh]');
+    if (!cap) return;
+    var src = cap.querySelector('[data-ts]');
+    if (!src) return;
+    var ts = parseInt(src.getAttribute('data-ts'), 10);
+    min = ageMin(ts);
+    var st = freshState(min);
+    cap.className = 'capsule' + (st.cls ? ' ' + st.cls : '');
+    src.textContent = st.txt;
+    var ban = document.getElementById('stale-banner');
+    if (ban) {
+      if (st.cls === 'bad') {
+        ban.textContent = '已停更 ' + durText(min) + '（最後一筆 ' + fmtAbs(ts) + '）';
+        ban.hidden = false;
+      } else {
+        ban.hidden = true;
+      }
+    }
+  }
+
+  /* ---------- 2) 自動更新（有新資料才 reload，且不打斷使用者） ---------- */
+  var MY_BUILT = (function () {
+    var b = window.DD373_BUILT;
+    if (!b) return 0;
+    var ms = Date.parse(b.length <= 16 ? b + '+08:00' : b);
+    return isNaN(ms) ? 0 : ms;
+  })();
+  var lastInteract = Date.now();
+  ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (ev) {
+    document.addEventListener(ev, function () { lastInteract = Date.now(); }, { passive: true });
+  });
+  function tooltipOpen() { return !!document.querySelector('.tt.on'); }
+  function shouldReload(newBuiltMs, now, lastInt, ttOpen) {
+    if (!newBuiltMs || !MY_BUILT) return false;
+    if (newBuiltMs <= MY_BUILT) return false;        // 沒有新資料 → 不 reload
+    if (ttOpen) return false;                        // tooltip 開著 → 不打斷
+    if (now - lastInt < 60000) return false;         // 最近 60 秒有操作 → 延到下一輪
+    return true;
+  }
+  function checkVersion() {
+    return fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.built) return false;
+        var nb = Date.parse(j.built.length <= 16 ? j.built + '+08:00' : j.built);
+        if (shouldReload(nb, Date.now(), lastInteract, tooltipOpen())) { location.reload(); return true; }
+        return false;
+      })
+      .catch(function () { return false; });
+  }
+
+  /* ---------- 3) 狀態記住／還原 ---------- */
+  var K_TAB = 'dd373.tab', K_DET = 'dd373.details', K_SCR = 'dd373.scroll';
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { } }
+
+  function winOfTabId(id) { return id.replace(/^tr/, '') + (id === 'tr7' || id === 'tr30' ? 'd' : 'h'); }
+  function restoreTab() {
+    var v = lsGet(K_TAB) || '24h';                                 // 讀不到就用 24 小時
+    var el = document.getElementById('tr' + v.replace(/[hd]$/, ''));
+    if (!el) el = document.getElementById('tr24');
+    if (el) el.checked = true;
+  }
+  function bindTab() {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=tr]'), function (r) {
+      r.addEventListener('change', function () { if (r.checked) lsSet(K_TAB, winOfTabId(r.id)); });
+    });
+  }
+  function bindDetails() {
+    var ds = document.querySelectorAll('details.dsc');
+    var saved = ssGet(K_DET);
+    if (saved) {
+      try {
+        var arr = JSON.parse(saved) || [];
+        Array.prototype.forEach.call(ds, function (d, i) { if (arr[i]) d.open = true; });
+      } catch (e) { }
+    }
+    Array.prototype.forEach.call(ds, function (d) {
+      d.addEventListener('toggle', function () {
+        var cur = [];
+        Array.prototype.forEach.call(ds, function (x) { cur.push(x.open ? 1 : 0); });
+        ssSet(K_DET, JSON.stringify(cur));
+      });
+    });
+  }
+  function bindScroll() {
+    var t = null;
+    window.addEventListener('scroll', function () {
+      if (t) return;
+      t = setTimeout(function () {
+        ssSet(K_SCR, String(Math.round(window.scrollY || 0)));
+        t = null;
+      }, 250);
+    }, { passive: true });
+  }
+  function restoreScroll() {
+    var v = ssGet(K_SCR);
+    if (v === null) return;
+    var y = parseInt(v, 10);
+    if (!isNaN(y) && y > 0) setTimeout(function () { window.scrollTo(0, y); }, 0);
+  }
+
+  /* ---------- 啟動 ---------- */
+  function boot() {
+    restoreTab();
+    bindTab();
+    bindDetails();
+    bindScroll();
+    updateTimes();
+    if (window.DD373TREND && window.DD373TREND.renderAll) window.DD373TREND.renderAll();   // 還原頁籤後用正確寬度重繪
+    restoreScroll();
+    setInterval(updateTimes, 60 * 1000);                            // 相對時間每 60 秒重算
+    setInterval(function () {                                       // 分頁可見時才檢查
+      if (document.visibilityState === 'visible') checkVersion();
+    }, pollMs());
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') { updateTimes(); checkVersion(); }
+    });
+  }
+
+  window.DD373PAGE = { restoreTab: restoreTab, shouldReload: shouldReload, checkVersion: checkVersion, updateTimes: updateTimes,
+                       relText: relText, durText: durText, freshState: freshState, ageMin: ageMin, nowMs: nowMs,
+                       pollMs: pollMs, builtMs: function () { return MY_BUILT; },
+                       setBuilt: function (v) { MY_BUILT = v; },
+                       preview: PREVIEW, fakeNow: FAKE_NOW };
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

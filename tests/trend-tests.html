@@ -57,11 +57,11 @@
 })();
 </script>
 <script>
-/* 測哪一支渲染器？預設測正在改版的 trend-next.js，可用 ?r=trend.js 測正式版。
+/* 測哪一支渲染器？預設測 static/trend.js，可用 ?r=<檔名> 換一支測。
    （一定要在測試程式之前同步載入，所以用 document.write） */
 (function () {
   var m = /[?&]r=([\w.\-]+)/.exec(location.search);
-  document.write('<script src="../static/' + (m ? m[1] : 'trend-next.js') + '"><\/script>');
+  document.write('<script src="../static/' + (m ? m[1] : 'trend.js') + '"><\/script>');
 })();
 </script>
 <script>

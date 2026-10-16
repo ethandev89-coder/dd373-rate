@@ -172,8 +172,19 @@
     var now = Math.floor(Date.now() / 1000);
     var x1 = now, x0 = now - win.span;
 
-    var real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
+    // 這個窗要用原始點還是降採樣序列？（7 天＝1 小時中位數＋min–max 帶；30 天＝4 小時）
+    var useAgg = !!(win.agg && DATA.agg && DATA.agg[win.agg]);
+    var real, gapReal;
+    if (useAgg) {
+      real = DATA.agg[win.agg].filter(function (r) { return r[0] >= x0 && r[0] <= now; })
+                              .map(function (r) { return { t: r[0], v: r[1], raw: r[2], o: !!r[3],
+                                                           lo: r[4], hi: r[5], n: r[6] }; });
+      gapReal = win.gapAgg || win.gapReal;              // 聚合後：連續幾個時段沒資料才斷線
+    } else {
+      real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
                        .map(function (p) { return { t: p.t, v: p.v, raw: p.raw, o: p.o }; });
+      gapReal = win.gapReal;
+    }
     var est = DATA.est.filter(function (p) { return p.t >= x0 && p.t <= now; })
                       .map(function (p) { return { t: p.t, v: p.v }; });
 
@@ -182,8 +193,10 @@
       return;
     }
 
-    // Y 範圍：實測（含離群原始值）＋估算
+    // Y 範圍：實測（含離群原始值、min–max 帶）＋估算
     var vals = real.map(function (p) { return p.v; }).concat(real.map(function (p) { return p.raw; }))
+                   .concat(real.map(function (p) { return p.lo === undefined ? p.v : p.lo; }))
+                   .concat(real.map(function (p) { return p.hi === undefined ? p.v : p.hi; }))
                    .concat(est.map(function (p) { return p.v; }));
     var yb = bounds(vals), ys = niceScale(yb[0], yb[1], 5, 0.05);
     var y0 = ys.min, y1 = ys.max;
@@ -203,29 +216,63 @@
            'font-family="-apple-system,PingFang TC,Microsoft JhengHei,sans-serif" role="img" ' +
            'aria-label="' + esc(win.label + ' 走勢') + '">');
 
-    // 面積填色漸層（由線往下淡出到透明）
+    // 面積填色漸層（由線往下淡出到透明；顏色/透明度由 CSS 的 .stop-top/.stop-bot 決定）
     s.push('<defs><linearGradient id="g_' + win.id + '" gradientUnits="userSpaceOnUse" ' +
            'x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '">' +
-           '<stop offset="0%" stop-color="' + win.color + '" stop-opacity="0.26"/>' +
-           '<stop offset="100%" stop-color="' + win.color + '" stop-opacity="0"/></linearGradient></defs>');
+           '<stop class="stop-top" offset="0%"/><stop class="stop-bot" offset="100%"/></linearGradient></defs>');
+
+    // 圖上註記：背景色帶（例：第 2 次移民期）先畫，格線與資料線疊在上面
+    (DATA.notes || []).forEach(function (nt) {
+      if (nt.type !== 'band' || nt.to <= x0 || nt.from >= x1) return;
+      var bx0 = X(Math.max(nt.from, x0)), bx1 = X(Math.min(nt.to, x1));
+      s.push('<rect class="note-band" x="' + bx0.toFixed(1) + '" y="' + pd.t +
+             '" width="' + Math.max(bx1 - bx0, 1).toFixed(1) + '" height="' + ih + '"/>');
+      if (bx1 - bx0 > 60) {
+        s.push('<text class="note-txt" x="' + (bx0 + 4).toFixed(1) + '" y="' + (pd.t + 11) +
+               '" text-anchor="start">' + nt.label + '</text>');
+      }
+    });
 
     // 格線＋Y 標籤
     ys.ticks.forEach(function (v) {
       var yy = Y(v);
-      s.push('<line x1="' + pd.l + '" y1="' + yy.toFixed(1) + '" x2="' + (pd.l + iw) + '" y2="' + yy.toFixed(1) +
-             '" stroke="#2a3441" stroke-width="1"/>');
-      s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) + '" font-size="' + FONT +
-             '" fill="#7f8c9b" text-anchor="end">' + num(v) + '</text>');
+      s.push('<line class="grid" x1="' + pd.l + '" y1="' + yy.toFixed(1) + '" x2="' + (pd.l + iw) + '" y2="' + yy.toFixed(1) + '"/>');
+      s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) +
+             '" text-anchor="end">' + num(v) + '</text>');
     });
+
+    // 圖上註記：垂直虛線標記（例：開始實測）
+    (DATA.notes || []).forEach(function (nt) {
+      if (nt.type !== 'vline' || nt.t < x0 || nt.t > x1) return;
+      var vx = X(nt.t), near = vx > pd.l + iw - 60;
+      s.push('<line class="note-line" x1="' + vx.toFixed(1) + '" y1="' + pd.t +
+             '" x2="' + vx.toFixed(1) + '" y2="' + (pd.t + ih) + '"/>');
+      s.push('<text class="note-txt" x="' + (near ? vx - 4 : vx + 4).toFixed(1) + '" y="' + (pd.t + 23) +
+             '" text-anchor="' + (near ? 'end' : 'start') + '">' + nt.label + '</text>');
+    });
+
+    // min–max 淡色帶（只有降採樣的窗有）
+    if (useAgg && real.length >= 2) {
+      segments(real, gapReal).forEach(function (seg) {
+        if (seg.length < 2) return;
+        var up = seg.map(function (p, i) {
+          return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.hi).toFixed(1);
+        }).join(' ');
+        var dn = seg.slice().reverse().map(function (p) {
+          return 'L' + X(p.t).toFixed(1) + ',' + Y(p.lo).toFixed(1);
+        }).join(' ');
+        s.push('<path class="band" d="' + up + ' ' + dn + ' Z"/>');
+      });
+    }
 
     // 面積填色：只涵蓋實測資料本身（第一筆→最後一筆），不從左緣起畫
     if (real.length >= 2) {
-      segments(real, win.gapReal).forEach(function (seg) {
+      segments(real, gapReal).forEach(function (seg) {
         if (seg.length < 2) return;
         var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
         d += ' L' + X(seg[seg.length - 1].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) +
              ' L' + X(seg[0].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) + ' Z';
-        s.push('<path d="' + d + '" fill="url(#g_' + win.id + ')" stroke="none"/>');
+        s.push('<path class="area" d="' + d + '" fill="url(#g_' + win.id + ')" stroke="none"/>');
       });
     }
 
@@ -233,22 +280,19 @@
     segments(est, win.gapEst).forEach(function (seg) {
       if (seg.length < 2) return;
       var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
-      s.push('<path d="' + d + '" fill="none" stroke="#7f8c9b" stroke-width="' + LW_EST + '" ' +
-             'stroke-dasharray="5 4" opacity="0.8"/>');
+      s.push('<path class="line-est" d="' + d + '"/>');
     });
 
     // 實測線
-    segments(real, win.gapReal).forEach(function (seg) {
+    segments(real, gapReal).forEach(function (seg) {
       var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
-      s.push('<path d="' + d + '" fill="none" stroke="' + win.color + '" stroke-width="' + LW +
-             '" stroke-linejoin="round" stroke-linecap="round"/>');
+      s.push('<path class="line-real" d="' + d + '"/>');
     });
 
     // 離群點：空心小點（原始值位置）
     real.forEach(function (p) {
       if (!p.o) return;
-      s.push('<circle cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.raw).toFixed(1) + '" r="3.4" fill="none" ' +
-             'stroke="' + win.color + '" stroke-width="1.6"/>');
+      s.push('<circle class="outlier" cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.raw).toFixed(1) + '" r="3.4"/>');
     });
 
     // X 標籤（台北整點／週一對齊）
@@ -259,30 +303,166 @@
       var anchor = 'middle';
       if (cx - est / 2 < 2) anchor = 'start';
       else if (cx + est / 2 > w - 2) anchor = 'end';
-      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) + '" font-size="' + FONT +
-             '" fill="#7f8c9b" text-anchor="' + anchor + '">' + txt + '</text>');
+      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) +
+             '" text-anchor="' + anchor + '">' + txt + '</text>');
     });
 
-    // 最新值標籤：貼在右側 Y 軸上（整數）
-    var last = real.length ? real[real.length - 1] : null;
-    if (last) {
-      var ly = Y(last.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
-      ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
-      s.push('<rect x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw + '" height="' + bh +
-             '" rx="4" fill="' + win.color + '"/>');
-      s.push('<text x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) + '" font-size="' + FONT_BADGE +
-             '" font-weight="700" fill="#0f1419" text-anchor="middle">' + num(last.v) + '</text>');
+    // 最新值標籤：貼在右側 Y 軸上（一律用最新的「原始實測點」，四個窗才會跟 Hero 一致）
+    var latest = null, li;
+    for (li = DATA.real.length - 1; li >= 0; li--) {
+      if (DATA.real[li].t <= now && DATA.real[li].t >= x0) { latest = DATA.real[li]; break; }
     }
+    if (!latest && real.length) latest = real[real.length - 1];
+    if (latest) {
+      var ly = Y(latest.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
+      ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
+      s.push('<rect class="badge" x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw +
+             '" height="' + bh + '" rx="6"/>');
+      s.push('<text class="badge-t" x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) +
+             '" text-anchor="middle">' + num(latest.v) + '</text>');
+    }
+
+    // 十字線圖層（hover 時只更新這一層，不重繪整張圖）
+    s.push('<g class="cross-g" visibility="hidden">' +
+           '<line class="cross" x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '"/>' +
+           '<circle class="cross-dot" cx="0" cy="0" r="4"/></g>');
 
     s.push('</svg>');
     host.innerHTML = s.join('');
 
-    CHARTS[win.id] = { host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih, x0: x0, x1: x1,
-                       y0: y0, y1: y1, X: X, Y: Y, real: real, est: est, step: step, plan: plan };
+    // hover 用的合併序列（實測＋估算，依時間排序；估算本來就在實測之前）
+    var hoverPts = est.map(function (p) { return { t: p.t, v: p.v, raw: p.v, o: false, src: 'est' }; })
+                      .concat(real.map(function (p) {
+                        return { t: p.t, v: p.v, raw: p.raw, o: p.o, src: 'real',
+                                 lo: p.lo, hi: p.hi, n: p.n };
+                      }))
+                      .sort(function (a, b) { return a.t - b.t; });
+
+    CHARTS[win.id] = { win: win, host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih,
+                       x0: x0, x1: x1, y0: y0, y1: y1, X: X, Y: Y, real: real, est: est,
+                       hoverPts: hoverPts, step: step, plan: plan, useAgg: useAgg,
+                       aggLabel: useAgg ? (win.agg === '7d' ? '1 小時' : '4 小時') : null };
+
+    updateSummary(win, CHARTS[win.id]);
 
     // 標籤量測保險：實際文字框若還重疊 → 隔一個標重畫（最多 3 輪）
     if (fitLabels(win, CHARTS[win.id], depth || 0)) return;
+    attachHover(win, CHARTS[win.id]);
     if (window.DD373AfterRender) window.DD373AfterRender(win, CHARTS[win.id]);
+  }
+
+  /* ---------- 本時窗摘要（圖上方一行） ---------- */
+  function updateSummary(win, st) {
+    var el = document.querySelector('.wsum[data-win="' + win.id + '"]');
+    if (!el) return;
+    var pts = st.hoverPts;
+    if (pts.length < 2) { el.innerHTML = ''; return; }
+    var first = pts[0], last = pts[pts.length - 1];
+    var vals = pts.map(function (p) { return p.v; });
+    var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
+    var chg = (last.v / first.v - 1) * 100;
+    var arrow = chg > 0.05 ? '▲' : (chg < -0.05 ? '▼' : '—');
+    var hasEst = pts.some(function (p) { return p.src === 'est'; });
+    el.innerHTML = '本時窗 ' + arrow + ' ' + (chg >= 0 ? '+' : '') + chg.toFixed(1) + '%' +
+                   '　高 <b>' + num(hi) + '</b>　低 <b>' + num(lo) + '</b>' +
+                   (hasEst ? '　<span class="tag">含估算</span>' : '');
+  }
+
+  /* ---------- 十字線＋tooltip（pointer events：滑鼠／觸控共用） ---------- */
+  function attachHover(win, st) {
+    var host = st.host;
+    // 注意：render() 會用 innerHTML 重畫整張圖，tooltip 元素會被清掉 → 每次都要確認它還掛在 DOM 上
+    if (!host.__tt) {
+      host.__tt = document.createElement('div');
+      host.__tt.className = 'tt';
+    }
+    if (host.__tt.parentNode !== host) host.appendChild(host.__tt);
+    if (!host.__bound) {
+      host.__bound = true;
+      host.addEventListener('pointerdown', function (e) {
+        host.__pressed = true;
+        hoverAt(win, e);
+      });
+      host.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'mouse' || host.__pressed) hoverAt(win, e);
+      });
+      host.addEventListener('pointerup', function () { host.__pressed = false; });   // 觸控：放開後保留
+      host.addEventListener('pointerleave', function (e) {
+        if (e.pointerType === 'mouse') hideHover(win);
+      });
+      document.addEventListener('pointerdown', function (e) {                        // 點別處才收起來
+        if (!host.contains(e.target)) hideHover(win);
+      }, true);
+    }
+  }
+
+  function hideHover(win) {
+    var st = CHARTS[win.id];
+    if (!st) return;
+    var g = st.host.querySelector('g.cross-g');
+    if (g) g.setAttribute('visibility', 'hidden');
+    if (st.host.__tt) st.host.__tt.classList.remove('on');
+  }
+
+  function hoverAt(win, ev) {
+    var st = CHARTS[win.id];
+    if (!st || !st.hoverPts.length) return;
+    var host = st.host, tt = host.__tt;
+    var rect = host.getBoundingClientRect();
+    var px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+
+    // 找最近的點；若附近 4px 內有離群點則優先吸附到它（空心圈半徑 3.4px，手指點得到，
+    // 這樣「10/15 的 863 原始值」在手機上也查得到 —— 否則要精準命中 0.1px 內才看得到）
+    var best = null, bestD = Infinity, outBest = null, outD = Infinity, i, d;
+    for (i = 0; i < st.hoverPts.length; i++) {
+      d = Math.abs(st.X(st.hoverPts[i].t) - px);
+      if (d < bestD) { bestD = d; best = i; }
+      if (st.hoverPts[i].o && d < outD) { outD = d; outBest = i; }
+    }
+    if (outBest !== null && outD <= 4) best = outBest;
+    if (!best && best !== 0) return;
+    var p = st.hoverPts[best], prev = best > 0 ? st.hoverPts[best - 1] : null;
+
+    var g = host.querySelector('g.cross-g');
+    var cx = st.X(p.t), cy = st.Y(p.v);
+    if (g) {
+      g.setAttribute('visibility', 'visible');
+      var ln = g.querySelector('line.cross');
+      ln.setAttribute('x1', cx.toFixed(1)); ln.setAttribute('x2', cx.toFixed(1));
+      var dot = g.querySelector('circle.cross-dot');
+      dot.setAttribute('cx', cx.toFixed(1)); dot.setAttribute('cy', cy.toFixed(1));
+    }
+
+    // 顯示的數值：離群點顯示原始值（主線畫的是平滑後的中位數）
+    var shown = p.o ? p.raw : p.v;
+    var prevV = prev ? (prev.o ? prev.raw : prev.v) : null;
+    var diff = prev ? shown - prevV : null;
+    var pct = prevV ? diff / prevV * 100 : null;
+    var difftxt;
+    if (diff === null) {
+      difftxt = '';
+    } else if (Math.abs(diff) < 0.5) {
+      difftxt = '較前一筆 ±0（' + (pct === null ? '0.0' : pct.toFixed(1)) + '%）';
+    } else {
+      difftxt = '較前一筆 ' + (diff > 0 ? '▲ +' : '▼ −') + num(Math.abs(diff)) +
+                (pct === null ? '' : '（' + (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%）');
+    }
+    tt.innerHTML =
+      '<div class="t1">' + fmtFull(p.t) + '</div>' +
+      '<div class="v">' + num(shown) + ' 天幣/元</div>' +
+      (difftxt ? '<div>' + difftxt + '</div>' : '') +
+      '<div class="src">來源：' + (p.src === 'real' ? '實測' : '估算') +
+      (p.n ? '（' + (st.aggLabel || '') + '中位數・' + p.n + ' 筆；區間 ' + num(p.lo) + '–' + num(p.hi) + '）'
+           : (p.o ? '（離群點・原始值；主線為中位數 ' + num(p.v) + '）' : '')) + '</div>';
+    tt.classList.add('on');
+
+    var tw = tt.offsetWidth, th = tt.offsetHeight;
+    var left = cx + 12;
+    if (left + tw > st.w - 4) left = cx - tw - 12;
+    if (left < 4) left = 4;
+    var top = Math.min(Math.max(py - th - 10, 4), st.h - th - 4);
+    tt.style.left = left.toFixed(1) + 'px';
+    tt.style.top = top.toFixed(1) + 'px';
   }
 
   function fitLabels(win, st, depth) {
@@ -340,6 +520,13 @@
     Array.prototype.forEach.call(document.querySelectorAll('input[name=tr]'), function (r) {
       r.addEventListener('change', function () { setTimeout(renderAll, 0); });
     });
+    // 系統深／淺色切換 → 重繪（顏色雖然都走 CSS 變數，重繪可確保 tooltip 量測與尺寸一致）
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onScheme = function () { setTimeout(renderAll, 0); };
+      if (mq.addEventListener) mq.addEventListener('change', onScheme);
+      else if (mq.addListener) mq.addListener(onScheme);
+    }
   }
 
   window.DD373TREND = { boot: boot, renderAll: renderAll, render: render, charts: CHARTS,
