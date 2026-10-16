@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="utf-8"><title>page.js 行為測試（手動開，不發佈）</title>
+<link rel="stylesheet" href="../static/apple.css">
+<style>body{background:#111;color:#ddd;font:13px/1.5 monospace;padding:14px}
+.ok{color:#2ecc71}.bad{color:#e74c3c}h2{font-size:14px;color:#8ab4f8;margin:18px 0 6px}
+#harness{position:absolute;left:-9999px;top:0}</style></head>
+<body>
+<h2>page.js 行為測試（時間會動／新鮮度／自動更新判斷／狀態還原）</h2>
+<pre id="out">running…</pre>
+
+<div id="harness">
+  <!-- 新鮮度膠囊與停更橫幅：時間用 data-ts，?now= 控制「現在」 -->
+  <span class="capsule" data-fresh><span class="d"></span><span id="ts-slot" data-ts="0" data-rel="1">…</span></span>
+  <div class="notice bad" id="stale-banner" hidden></div>
+  <div class="tabs">
+    <input type="radio" name="tr" id="tr24" checked>
+    <input type="radio" name="tr" id="tr48">
+    <input type="radio" name="tr" id="tr7">
+    <input type="radio" name="tr" id="tr30">
+    <div class="tabbar"><label for="tr24">24 小時</label><label for="tr48">48 小時</label>
+      <label for="tr7">7 天</label><label for="tr30">30 天</label></div>
+    <div class="panels"><div class="panel p24"><div class="chart" data-win="24h"></div></div></div>
+  </div>
+  <details class="dsc"><summary>全服排行<span class="dsub">飛馬第 22／22 名</span></summary><div>…</div></details>
+  <details class="dsc"><summary>口徑說明<span class="dsub">方法論</span></summary><div>…</div></details>
+</div>
+
+<script>
+/* 模擬「上一次已經選了 7 天」→ 驗 localStorage 還原（也順便驗壞資料 fallback） */
+try { localStorage.setItem('dd373.tab', '7d'); } catch (e) {}
+window.DD373_PREVIEW = true;                      // 測試頁＝預覽版（才吃 ?now=／?poll=）
+window.DD373_BUILT = '2026-10-17T02:18:08';
+</script>
+<script>
+/* 膠囊的 data-ts 用算的：台北 2026-10-17 01:00 */
+document.getElementById('ts-slot').setAttribute('data-ts',
+  String(Math.floor(new Date('2026-10-17T01:00:00+08:00').getTime() / 1000)));
+</script>
+<script src="../static/page.js"></script>
+<script>
+var P = window.DD373PAGE, log = [], pass = 0, fail = 0;
+function ok(name, cond, got) {
+  (cond ? pass++ : fail++);
+  log.push('<span class="' + (cond ? 'ok' : 'bad') + '">' + (cond ? 'PASS' : 'FAIL') + '</span> ' + name
+           + '   got=' + JSON.stringify(got));
+}
+function eq(name, a, b) { ok(name, JSON.stringify(a) === JSON.stringify(b), a); }
+function tp(s) { return Math.floor(new Date(s.replace(' ', 'T') + '+08:00').getTime() / 1000); }
+
+log.push('== 預覽版測試參數 ==');
+ok('?now= 有生效（nowMs 用假造時間）', P.nowMs() === new Date('2026-10-17T04:00+08:00').getTime(), new Date(P.nowMs()).toISOString());
+ok('?poll=15 → 15 秒', P.pollMs() === 15000, P.pollMs());
+ok('DD373_BUILT 有被讀到', P.builtMs() === new Date('2026-10-17T02:18:08+08:00').getTime(), P.builtMs());
+
+log.push('');
+log.push('== 相對時間／新鮮度門檻 ==');
+eq('relText(0)', P.relText(0), '剛剛');
+eq('relText(1)', P.relText(1), '1 分鐘前');
+eq('relText(45)', P.relText(45), '45 分鐘前');
+eq('relText(90)', P.relText(90), '1 小時 30 分鐘前');
+eq('30 分＝新鮮（no class）', P.freshState(30), { cls: '', txt: '30 分鐘前' });
+eq('31 分＝資料延遲（warn）', P.freshState(31), { cls: 'warn', txt: '資料延遲' });
+eq('60 分＝資料延遲（warn）', P.freshState(60), { cls: 'warn', txt: '資料延遲' });
+eq('61 分＝資料停更（bad）', P.freshState(61), { cls: 'bad', txt: '資料停更 1 小時 1 分鐘前' });
+
+log.push('');
+log.push('== DOM：膠囊與停更橫幅（?now=2026-10-17T04:00，資料 01:00 → 180 分前）==');
+P.updateTimes();
+var cap = document.querySelector('[data-fresh]'), ban = document.getElementById('stale-banner');
+eq('膠囊 class＝capsule bad', cap.className, 'capsule bad');
+eq('膠囊文字', cap.querySelector('[data-ts]').textContent, '資料停更 3 小時前');
+ok('停更橫幅顯示且有文字', !ban.hidden && ban.textContent.indexOf('資料已停更 3 小時前') === 0, ban.textContent);
+
+log.push('');
+log.push('== 自動更新判斷（有新資料才 reload、不打斷使用者）==');
+var MY = P.builtMs(), soon = Date.now() - 1000, long = Date.now() - 120000;
+eq('沒有新資料（built 一樣）→ 不 reload', P.shouldReload(MY, Date.now(), long, false), false);
+eq('built 較舊（遠端更舊）→ 不 reload', P.shouldReload(MY - 60000, Date.now(), long, false), false);
+ok('有新資料＋很久沒操作＋沒 tooltip → reload', P.shouldReload(MY + 60000, Date.now(), long, false) === true, true);
+ok('有新資料但 tooltip 開著 → 不 reload', P.shouldReload(MY + 60000, Date.now(), long, true) === false, false);
+ok('有新資料但 10 秒前才操作 → 不 reload', P.shouldReload(MY + 60000, Date.now(), soon, false) === false, false);
+ok('有新資料但 61 秒前操作過 → reload', P.shouldReload(MY + 60000, Date.now(), Date.now() - 61000, false) === true, true);
+ok('沒有 DD373_BUILT → 一律不 reload', (function () { var b = P.builtMs(); P.setBuilt(0); var r = P.shouldReload(MY + 60000, Date.now(), long, false); P.setBuilt(b); return r === false; })(), false);
+
+log.push('');
+log.push('== 狀態還原 ==');
+/* 注意：page.js 的 boot() 綁在 DOMContentLoaded，而這段測試是解析時就跑 →
+   所以還原類的斷言一定要等 load 之後再跑，否則會誤判成「沒還原」 */
+window.addEventListener('load', function () {
+  var lsOK = (function () {
+    try { localStorage.setItem('__t', '1'); var v = localStorage.getItem('__t') === '1'; localStorage.removeItem('__t'); return v; }
+    catch (e) { return false; }
+  })();
+  if (!lsOK) {
+    log.push('<span class="bad">SKIP</span> localStorage 在此環境不可用（file:// 會被 Chrome 停用）→ 改用 http://localhost 測');
+  } else {
+    eq('localStorage 的 7d 有被還原', document.getElementById('tr7').checked, true);
+    eq('其他頁籤沒被誤選', [document.getElementById('tr24').checked, document.getElementById('tr48').checked, document.getElementById('tr30').checked], [false, false, false]);
+    try { localStorage.setItem('dd373.tab', '亂七八糟'); } catch (e) {}
+    P.restoreTab();
+    eq('localStorage 壞值 → fallback 24 小時', document.getElementById('tr24').checked, true);
+  }
+  log.push('');
+  log.push('<b>' + (fail === 0 ? '✅ 全部通過' : '❌ 有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>');
+  document.getElementById('out').innerHTML = log.join('\n');
+});
+</script>
+</body>
+</html>

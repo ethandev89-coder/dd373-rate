@@ -19,6 +19,7 @@
   python3 build-page-next.py --no-fetch # 只用快取／歷史（離線測試）
 """
 import argparse
+import hashlib
 import html
 import json
 import os
@@ -46,7 +47,8 @@ ERR_RATIO_MAX = 0.4     # 錯誤台數比例超過此值 → 判定被擋
 
 TZ = dt.timezone(dt.timedelta(hours=8))      # Asia/Taipei（台灣無日光節約，固定 +8）
 TREND_JS = os.path.join(PAGE_DIR, "static", "trend-next.js")
-APPLE_CSS = os.path.join(PAGE_DIR, "static", "apple.css")   # 蘋果風設計系統（build 時內嵌）   # 預覽版專用渲染器（改版期間不動正式版的 trend.js）   # 走勢圖渲染器（build 時內嵌進單檔頁面）
+APPLE_CSS = os.path.join(PAGE_DIR, "static", "apple.css")
+PAGE_JS = os.path.join(PAGE_DIR, "static", "page.js")     # 行為層（時間／輪詢／狀態還原）   # 蘋果風設計系統（build 時內嵌）   # 預覽版專用渲染器（改版期間不動正式版的 trend.js）   # 走勢圖渲染器（build 時內嵌進單檔頁面）
 
 
 def ep(t):
@@ -193,6 +195,23 @@ def load_series(server=USER_SERVER, days=30):
     pts.sort()
     cut = dt.datetime.now().astimezone() - dt.timedelta(days=days)
     return [p for p in pts if p[0] >= cut]
+
+
+def agg_series(points, bucket_sec):
+    """降採樣：把實測點聚成固定長度的時段（台北時間對齊），每段取中位數＋min／max＋筆數。
+    points = [(naive_t, v)]；回傳 [(naive_t(段起點), 中位數, min, max, 筆數)]。"""
+    import statistics as st
+    buckets = {}
+    for t, v in points:
+        k = int((t.replace(tzinfo=TZ).timestamp() + 8 * 3600) // bucket_sec)
+        buckets.setdefault(k, []).append(v)
+    out = []
+    for k in sorted(buckets):
+        vs = sorted(buckets[k])
+        start = k * bucket_sec - 8 * 3600
+        out.append((dt.datetime.fromtimestamp(start, TZ).replace(tzinfo=None),
+                    st.median(vs), min(vs), max(vs), len(vs)))
+    return out
 
 
 def append_vw2_series(ts_iso, value):
@@ -510,19 +529,43 @@ def build(d, prev):
 
     # ---- 走勢圖資料（epoch 秒；時區換算一律在 JS 端 +8h 做）----
     chart_real = hampel([(t, v) for t, v in all_vw2])       # 5 筆 Hampel：主線用平滑值、離群原始值另存
+    # 降採樣：7 天窗＝1 小時中位數（＋min–max 帶）；30 天窗＝4 小時
+    agg7 = agg_series([(t, v) for t, v in all_vw2], 3600)
+    agg30 = agg_series([(t, v) for t, v in all_vw2], 4 * 3600)
+    # 聚合後的離群標記（5 筆 Hampel，跟原始序列同一套規則）
+    chart_agg = {}
+    for key, rows in (("7d", agg7), ("30d", agg30)):
+        h = hampel([(t, med) for t, med, _lo, _hi, _n in rows])
+        chart_agg[key] = [[ep(t), round(pv, 1), round(raw, 1), 1 if o else 0,
+                           round(rows[i][2], 1), round(rows[i][3], 1), rows[i][4]]
+                          for i, (t, pv, raw, o) in enumerate(h)]
+
+    # 圖上註記：第 2 次移民期色帶、開始實測直線（時間一律台北）
+    chart_notes = [
+        {"type": "band", "from": ep(dt.datetime(2026, 9, 16, 0, 0)),
+         "to": ep(dt.datetime(2026, 9, 30, 0, 0)), "label": "第 2 次移民 9/16–9/29"},
+        {"type": "vline", "t": ep(dt.datetime(2026, 10, 14, 19, 1)), "label": "開始實測 10/14 19:01"},
+    ]
+
     chart_payload = {
         "now": ep(t_now),
         "r": r_used,
         # [epoch, 平滑值, 原始值, 是否離群]
         "real": [[ep(t), round(v, 1), round(raw, 1), 1 if o else 0] for t, v, raw, o in chart_real],
         "est": [[ep(t), round(v, 1)] for t, v in est_all],
+        # 降採樣：[段起點, 中位數(畫線用), 原始中位數, 是否離群, min, max, 筆數]
+        "agg": chart_agg,
+        "notes": chart_notes,
     }
     chart_windows = [
         # gapReal／gapEst：相鄰兩筆超過此秒數就斷線（實測 30 分；估算抽樣稀疏 → 用 12 小時）
+        # agg：這個窗要用哪一組降採樣序列（沒有就畫原始點）
         {"id": "24h", "label": "24 小時", "span": 86400, "gapReal": 1800, "gapEst": 43200},
         {"id": "48h", "label": "48 小時", "span": 172800, "gapReal": 1800, "gapEst": 43200},
-        {"id": "7d", "label": "7 天", "span": 604800, "gapReal": 1800, "gapEst": 43200},
-        {"id": "30d", "label": "30 天", "span": 2592000, "gapReal": 1800, "gapEst": 43200},
+        {"id": "7d", "label": "7 天", "span": 604800, "gapReal": 1800, "gapEst": 43200,
+         "agg": "7d", "gapAgg": 3 * 3600},
+        {"id": "30d", "label": "30 天", "span": 2592000, "gapReal": 1800, "gapEst": 43200,
+         "agg": "30d", "gapAgg": 3 * 4 * 3600},
     ]
 
     def panel(win_id, cls, npts):
@@ -570,13 +613,17 @@ def build(d, prev):
 
     # ---- 走勢圖：資料 JSON + 視窗設定 + 渲染器（全部內嵌，維持單檔、無外部依賴）----
     apple_css = open(APPLE_CSS, encoding="utf-8").read()
+    page_js_src = open(PAGE_JS, encoding="utf-8").read()
     trend_js_src = open(TREND_JS, encoding="utf-8").read()
+    preview_flag = ('<script>window.DD373_PREVIEW=true;'
+                    'window.DD373_BUILT="' + now.isoformat(timespec="seconds") + '";</script>\n')
     chart_block = (
         '<script type="application/json" id="chart-data">'
         + json.dumps(chart_payload, separators=(",", ":"))
-        + '</script>\n<script>window.DD373WINDOWS='
+        + '</script>\n' + preview_flag + '<script>window.DD373WINDOWS='
         + json.dumps(chart_windows, ensure_ascii=False, separators=(",", ":"))
-        + ';</script>\n<script>\n' + trend_js_src + '\n</script>')
+        + ';</script>\n<script>\n' + trend_js_src + '\n</script>'
+        + '<script>\n' + page_js_src + '\n</script>')
 
 
     # ---------- Hero 卡 ----------
@@ -638,6 +685,9 @@ def build(d, prev):
       <p>台幣金額＝② 加權幣值換算（買 5,000 萬金的成本），匯率 CNY→TWD {fx:.4f}（產生時）。</p>
       <p class="mt">估算段（灰色虛線）</p>
       <p>實測 ② 從 10/14 19:01 開始記錄；更早的資料用舊的「實買」序列 × 比率 {r_txt} 換算（比率取自兩者同時段的實測配對，誤差 &lt;1%）。估算段的趨勢可信，但<b>絕對值只能當參考</b>，不要與實測逐點比大小。</p>
+      <p class="mt">降採樣與圖上註記</p>
+      <p>7 天窗把實測聚合成 <b>1 小時中位數</b>、30 天窗聚合成 <b>4 小時中位數</b>；淡色帶是該時段的 <b>min–max</b> 區間。滑過去看得到該時段的中位數、區間與筆數；某個時段完全沒資料就斷線，不會硬連。</p>
+      <p>圖上的淡色背景帶＝<b>第 2 次移民期（9/16–9/29）</b>；虛線直線＝實測 ② 開始記錄的時間（<b>10/14 19:01</b>）。</p>
       <p class="mt">薄市場</p>
       <p>掛單總量 &lt;2 億金時，單一賣家就能推動數字 → 一律標「薄市場」，看趨勢不要看單點。</p>
       <p class="mt">排名的用途</p>
@@ -669,9 +719,10 @@ def build(d, prev):
 <div class="preview-banner">預覽版・資料停在 {me_ts:%m/%d %H:%M}（<span data-ts="{ep(me_ts)}" data-rel="1">{me_age} 分鐘前</span>）　正式版：<a href="./index.html">index.html</a></div>
 <nav class="nav">
   <span class="nav-t">天幣幣值</span>
-  <span class="capsule{fresh_cls}"><span class="d"></span><span data-ts="{ep(me_ts)}" data-rel="1">{fresh_txt}</span></span>
+  <span class="capsule{fresh_cls}" data-fresh><span class="d"></span><span data-ts="{ep(me_ts)}" data-rel="1">{fresh_txt}</span></span>
 </nav>
 {bo_block}
+<div class="notice bad" id="stale-banner" hidden></div>
 <header class="page-head">
   <h1>飛馬珀伽索斯</h1>
   <p class="sub">DD373 · 買滿 5,000 萬金加權</p>
@@ -693,7 +744,10 @@ def build(d, prev):
     with open(os.path.join(PUBLIC_DIR, OUT_HTML), "w", encoding="utf-8") as f:
         f.write(html_doc)
     if WRITE_VERSION:
-        json.dump({"built": now.isoformat(timespec="seconds"), "out": OUT_HTML, "ts": d["ts"]},
+        # built＝每次發佈都會變（前端用它判斷有沒有新資料）；hash＝內容指紋（保險）
+        json.dump({"built": now.isoformat(timespec="seconds"),
+                   "hash": hashlib.sha256(html_doc.encode("utf-8")).hexdigest()[:16],
+                   "out": OUT_HTML, "ts": d["ts"]},
                   open(os.path.join(PUBLIC_DIR, "version.json"), "w"), ensure_ascii=False)
     if WRITE_PAGE_DATA:
         json.dump({"ts": d["ts"], "fx": fx, "servers": ok}, open(os.path.join(DATA_DIR, "page-data.json"), "w"),
