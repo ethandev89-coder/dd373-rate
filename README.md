@@ -7,7 +7,23 @@
 - 資料：`data/sweep-history.json`（每次掃描的原始 JSON，可回推趨勢）
 - 頁面：`docs/index.html`（唯一發佈檔，GitHub Pages 來源＝main /docs）
 
+
+## ② 口徑與「估算段」
+
+- 頁面主數字＝**② 買滿 5,000 萬金加權幣值**（1 台幣≈N 金）。
+- ② 的實測只從 2026-10-14 19:01 起（我們自己的每小時掃描＋15 分輕掃才同時存 ② 與實買）。
+- 更早的歷史用 `backfill-vw2.py` 換算：**r = ② ÷ 實買**（逐服取中位，用同時段實測配對算），舊的實買序列 × r → `data/vw2-estimated-all.json`（22 台）與 `vw2-estimated.json`（飛馬）。
+- 頁面上 **實線＝實測 ②、灰虛線＝估算 ②**，legend 標明比率與「非實測」。每次整頁發佈都會刷新估算段。
+- ② 長期序列獨立存 `data/vw2-series.json`（上限 9,000 筆≈93 天），避免 30 天窗因 400 筆裁切而缺歷史。
+
 ## 檔案
+
+| 檔案 | 用途 |
+|---|---|
+| `build-page.py` | 抓 DD373（22 台 × 1 排序）→ 算 ①/②/變現 → render `docs/index.html`；`--light` 則只把最新輕掃的飛馬數字套進頁面 |
+| `backfill-vw2.py` | 舊實買歷史 → 估算 ②（逐服比率換算） |
+| `publish.sh` | build（full 時先跑 backfill）→ commit → push；`--light`＝15 分鐘輕量發佈、`--no-jitter`＝除錯 |
+
 
 | 檔案 | 用途 |
 |---|---|

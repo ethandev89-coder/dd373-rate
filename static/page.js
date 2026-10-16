@@ -46,10 +46,16 @@
     var h = Math.floor(min / 60), m = min % 60;
     return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '') + '前';
   }
+  function durText(min) {                                          // 經過時間（不帶「前」）
+    if (min < 1) return '不到 1 分鐘';
+    if (min < 60) return min + ' 分鐘';
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '');
+  }
   function freshState(min) {                                       // 資料新鮮度：ok／warn／bad
     if (min <= 30) return { cls: '', txt: relText(min) };
     if (min <= 60) return { cls: 'warn', txt: '資料延遲' };
-    return { cls: 'bad', txt: '資料停更 ' + relText(min) };
+    return { cls: 'bad', txt: '已停更 ' + durText(min) };
   }
 
   function updateTimes() {
@@ -70,7 +76,7 @@
     var ban = document.getElementById('stale-banner');
     if (ban) {
       if (st.cls === 'bad') {
-        ban.textContent = '資料已停更 ' + relText(min) + '（最後一筆 ' + fmtAbs(ts) + '）';
+        ban.textContent = '已停更 ' + durText(min) + '（最後一筆 ' + fmtAbs(ts) + '）';
         ban.hidden = false;
       } else {
         ban.hidden = true;
@@ -181,7 +187,7 @@
   }
 
   window.DD373PAGE = { restoreTab: restoreTab, shouldReload: shouldReload, checkVersion: checkVersion, updateTimes: updateTimes,
-                       relText: relText, freshState: freshState, ageMin: ageMin, nowMs: nowMs,
+                       relText: relText, durText: durText, freshState: freshState, ageMin: ageMin, nowMs: nowMs,
                        pollMs: pollMs, builtMs: function () { return MY_BUILT; },
                        setBuilt: function (v) { MY_BUILT = v; },
                        preview: PREVIEW, fakeNow: FAKE_NOW };

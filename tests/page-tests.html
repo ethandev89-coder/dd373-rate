@@ -59,18 +59,21 @@ eq('relText(0)', P.relText(0), '剛剛');
 eq('relText(1)', P.relText(1), '1 分鐘前');
 eq('relText(45)', P.relText(45), '45 分鐘前');
 eq('relText(90)', P.relText(90), '1 小時 30 分鐘前');
+eq('durText(7)＝7 分鐘', P.durText(7), '7 分鐘');
+eq('durText(67)＝1 小時 7 分鐘', P.durText(67), '1 小時 7 分鐘');
+eq('durText(120)＝2 小時', P.durText(120), '2 小時');
 eq('30 分＝新鮮（no class）', P.freshState(30), { cls: '', txt: '30 分鐘前' });
 eq('31 分＝資料延遲（warn）', P.freshState(31), { cls: 'warn', txt: '資料延遲' });
 eq('60 分＝資料延遲（warn）', P.freshState(60), { cls: 'warn', txt: '資料延遲' });
-eq('61 分＝資料停更（bad）', P.freshState(61), { cls: 'bad', txt: '資料停更 1 小時 1 分鐘前' });
+eq('61 分＝資料停更（bad）', P.freshState(61), { cls: 'bad', txt: '已停更 1 小時 1 分鐘' });
 
 log.push('');
 log.push('== DOM：膠囊與停更橫幅（?now=2026-10-17T04:00，資料 01:00 → 180 分前）==');
 P.updateTimes();
 var cap = document.querySelector('[data-fresh]'), ban = document.getElementById('stale-banner');
 eq('膠囊 class＝capsule bad', cap.className, 'capsule bad');
-eq('膠囊文字', cap.querySelector('[data-ts]').textContent, '資料停更 3 小時前');
-ok('停更橫幅顯示且有文字', !ban.hidden && ban.textContent.indexOf('資料已停更 3 小時前') === 0, ban.textContent);
+eq('膠囊文字', cap.querySelector('[data-ts]').textContent, '已停更 3 小時');
+ok('停更橫幅顯示且有文字', !ban.hidden && ban.textContent.indexOf('已停更 3 小時') === 0, ban.textContent);
 
 log.push('');
 log.push('== 自動更新判斷（有新資料才 reload、不打斷使用者）==');
