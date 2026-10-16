@@ -316,9 +316,5 @@ details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
   padding: 8px 12px; font-size: 13px; line-height: 1.45;
 }
 
-/* ---------- Hero：台幣成本那一行 ---------- */
-.hero-nt { margin: 4px 0 0; font-size: 15px; color: var(--label-2); }
-.hero-nt b { color: var(--label); font-weight: 600; }
-
 /* ---------- 說明泡泡 ---------- */
 [data-tip] { cursor: pointer; }
