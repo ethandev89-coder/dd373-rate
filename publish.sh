@@ -53,6 +53,12 @@ trap 'rm -rf "$LOCK"' EXIT
     python3 backfill-vw2.py || true          # 刷新「估算 ②」長歷史（由舊的實買序列換算）
     python3 build-page.py
   fi
+  # ② 長期序列每筆都必須有掛單量 s：先順手補（正常不會有事，兩條寫入路徑都會帶 s），
+  # 補不到就只警告不擋發佈（頁面照樣要更新），明細跑 python3 tests/test-vw2-series.py
+  python3 tools/backfill-series-stock.py --quiet || true
+  if ! python3 tests/test-vw2-series.py --data-only >/dev/null 2>&1; then
+    echo "[publish] ⚠️ data/vw2-series.json 有筆數缺 s（掛單量）→ python3 tests/test-vw2-series.py 看明細"
+  fi
   if [ -z "$(git status --porcelain docs/index.html data/page-data.json docs/version.json data/vw2-series.json)" ]; then
     echo "[publish] 頁面無變化，略過 push"
   else

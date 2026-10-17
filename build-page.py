@@ -75,6 +75,7 @@ def hampel(points, k=2, n_sig=3.0):
 sys.path.insert(0, os.path.join(HOME, ".hermes", "scripts"))
 from lt_rate_v2 import server_rate       # noqa: E402
 from lt_cashrate import fetch_fx         # noqa: E402
+from dd373_series import append_series as _series_append, missing_stock as _series_missing  # noqa: E402
 
 # 檔名帶減號，用 importlib 載入 skill 內的 sweep 工具
 import importlib.util                    # noqa: E402
@@ -225,21 +226,9 @@ def append_vw2_series(ts_iso, value, stock=None):
 
     """② 長期序列（只存飛馬一個數字一筆）——獨立檔案，不受 sweep-history / fm-light 的 400 筆上限影響，
     7 天／30 天窗才不會因為裁切而缺歷史。
-    stock＝當時的市場總掛單量（萬天幣），一起存，fm-light 的 15 分紀錄被裁掉後 tooltip 還是有值。"""
-    if not value:
-        return
-    p = os.path.join(DATA_DIR, "vw2-series.json")
-    try:
-        ser = json.load(open(p, encoding="utf-8"))
-    except Exception:
-        ser = []
-    key = ts_iso[:16]
-    if not any(x.get("ts", "")[:16] == key for x in ser[-3:]):
-        row = {"ts": ts_iso, "v": value}
-        if stock:
-            row["s"] = stock
-        ser.append(row)
-    json.dump(ser[-9000:], open(p, "w"), ensure_ascii=False)          # 9000 筆 ≈ 93 天（15 分一筆）
+    stock＝當時的市場總掛單量（萬天幣）。寫入一律走 `dd373_series.append_series`（兩條產線共用，
+    每筆都保證有 s；缺 stock 會沿用前值或跳過，不會寫出沒有 s 的筆）。"""
+    return _series_append(os.path.join(DATA_DIR, "vw2-series.json"), ts_iso, value, stock)
 
 
 def load_vw2_series(hours=24, key="vw2_gold_per_twd"):

@@ -3,3 +3,5 @@ logs-build.log
 cache/
 __pycache__/
 *.pyc
+data/*.bak-*
+data/vw2-series.json.tmp*

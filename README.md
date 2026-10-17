@@ -108,6 +108,12 @@ cd ~/.hermes/dd373-page && git checkout pre-apple -- build-page.py static/trend.
 - 7 天／30 天窗是聚合時段（1 小時／4 小時）的**中位數**。
 - 掛單量跟著 ② 一起存進 `data/vw2-series.json`（`s` 欄位），fm-light 的 15 分紀錄被裁掉後歷史還有值。
 
+**② 長期序列的寫入規則（每筆都必須有 `s`）**
+- 兩條寫入路徑：每小時整頁掃描（本 repo 的 `build-page.py`）與 15 分鐘輕掃（`~/.hermes/scripts/dd373-fm-light.py`）。兩條**只准**呼叫 `~/.hermes/scripts/dd373_series.py` 的 `append_series()`——唯一寫入點，負責同分鐘去重、9,000 筆上限、原子寫入（tmp + `os.replace`）。
+- 呼叫端沒給掛單量時：沿用序列裡最近的 `s` 並印警告；連可沿用的都沒有就**不寫**（寧可少一個點，也不要留下沒有 `s` 的資料）。
+- 事故記錄：輕掃那條以前自己寫 `{"ts","v"}`，造成 59 筆沒有 `s`（tooltip 少一行「掛單」）。已修；舊資料用 `python3 tools/backfill-series-stock.py` 回填（動筆前備份 `data/vw2-series.json.bak-YYYYmmdd-HHMMSS`，補完逐筆驗證 `ts`／`v`／筆數完全沒變）。
+- 測試：`python3 tests/test-vw2-series.py`（12 項：寫入必帶 `s`、缺值沿用或跳過、同分鐘去重、上限裁切、兩條產線原始碼守門、真實檔案每筆都要有 `ts/v/s`）。`publish.sh` 每次發佈前會跑 `--data-only`，順手回填缺的 `s`，仍缺只在 log 警告（不擋發佈）。
+
 **降採樣與圖上註記**
 - 7 天窗：實測聚合成 1 小時中位數；30 天窗：4 小時中位數。淡色帶＝該時段 min–max 區間。滑過去看得到中位數、區間與筆數。
 - 斷線規則：原始點相鄰超過 30 分鐘斷線；7 天窗中斷 3 小時以內不斷線；30 天窗中斷 12 小時以內不斷線。
