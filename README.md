@@ -112,9 +112,12 @@ cd ~/.hermes/dd373-page && git checkout pre-apple -- build-page.py static/trend.
 - 兩條寫入路徑：每小時整頁掃描（本 repo 的 `build-page.py`）與 15 分鐘輕掃（`~/.hermes/scripts/dd373-fm-light.py`）。兩條**只准**呼叫 `~/.hermes/scripts/dd373_series.py` 的 `append_series()`——唯一寫入點，負責同分鐘去重、9,000 筆上限、原子寫入（tmp + `os.replace`）。
 - `v`（② 幣值）是主要資料：**永遠照寫**，不會因為缺掛單量就跳過整筆。
 - `s`（掛單量，萬天幣）可以缺：缺就存 `null`（**不沿用上一筆**，沿用會讓 tooltip 顯示不是那個時點的數字），寫入時在 log 留警告；tooltip 那一點就不顯示掛單量。產頁端只做「同一分鐘」對應（`load_stock_by_minute()`），不再用鄰近時點硬套。
-- 連續 4 次（輕掃約 1 小時）沒有 `s` → **私訊提醒一次**（`missing_streak()==4` 時印訊息；恢復後重新計數，下次再 4 次才會再提醒）。輕掃的 stderr 寫進 `logs/fm-light.err`，只有 stdout 會變私訊。
+- **缺值告警：各產線各自計數**（不要用序列算，兩支會互相歸零）。計數存在 `data/stock-alert-state.json`（`{"light": n, "sweep": n}`，`note_stock_result()`），拿到掛單量就歸零：
+  - **15 分輕掃**（`dd373-fm-light.py`，key=`light`）連續 **4 次**（約 1 小時）沒有 `s` → 告警一次，直接印 stdout（這支 cron deliver=discord）。
+  - **全服掃描**（`build-page.py`，key=`sweep`）連續 **2 次**（約 2 小時）沒有 `s` → 告警一次。這支 cron 是 deliver=local，所以訊息排進 `data/alert-outbox.json`，由每 15 分鐘的輕掃 wrapper flush 成私訊。
+  - 兩支共用同一個解析函式（`lt_rate_v2.server_rate()` 取 `stock_wj`），所以 DD373 改版會一起壞；但抓取參數／token／頁面版本各自獨立，實務上可能只壞一支 → 才要分開計數與分開告警（告警文字會寫明是哪一支程式）。
 - 事故記錄：輕掃那條以前自己寫 `{"ts","v"}`，造成 59 筆沒有 `s`（tooltip 少一行「掛單」）。那 59 筆已用 `python3 tools/backfill-series-stock.py` 補上（手動工具；先備份 `data/vw2-series.json.bak-*`，補完驗證 `ts`／`v`／筆數沒變）。
-- 測試：`python3 tests/test-vw2-series.py`（17 項：v 必寫、缺 s 存 null 且有警告、不沿用、同分鐘去重、上限、連續缺值判斷、輕掃端到端＋第 4 次才告警一次、原始碼守門、真實檔案每筆都有 `ts/v`）。`publish.sh` 發佈前只驗 `ts/v`（`--data-only`），缺 `ts/v` 才在 log 警告。
+- 測試：`python3 tests/test-vw2-series.py`（23 項：v 必寫、缺 s 存 null 且有警告、不沿用、同分鐘去重、上限、各產線獨立計數、輕掃端到端＋第 4 次才告警一次、全服第 2 次才排告警、出件匣 push/flush、原始碼守門、真實檔案每筆都有 `ts/v`）。`publish.sh` 發佈前只驗 `ts/v`（`--data-only`），缺 `ts/v` 才在 log 警告。
 
 **降採樣與圖上註記**
 - 7 天窗：實測聚合成 1 小時中位數；30 天窗：4 小時中位數。淡色帶＝該時段 min–max 區間。滑過去看得到中位數、區間與筆數。

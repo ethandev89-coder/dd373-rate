@@ -76,6 +76,8 @@ sys.path.insert(0, os.path.join(HOME, ".hermes", "scripts"))
 from lt_rate_v2 import server_rate       # noqa: E402
 from lt_cashrate import fetch_fx         # noqa: E402
 from dd373_series import append_series as _series_append, missing_stock as _series_missing  # noqa: E402
+from dd373_series import note_stock_result, ALERT_SWEEP_2   # noqa: E402  （全服掃描自己的缺值計數）
+from dd373_alert_outbox import push as push_alert           # noqa: E402  （publish cron 不私訊 → 排進出件匣）
 
 # 檔名帶減號，用 importlib 載入 skill 內的 sweep 工具
 import importlib.util                    # noqa: E402
@@ -183,6 +185,7 @@ def fetch_sweep(force=False):
     me_out = next((s for s in out if s["server"] == USER_SERVER), None)
     if me_out:
         append_vw2_series(d["ts"], me_out.get("vw2_gold_per_twd"), me_out.get("stock_wj"))   # 記進 ② 長期序列（含掛單量）
+        note_sweep_stock(me_out.get("stock_wj"))          # 全服掃描自己的連續缺值計數（跟輕掃分開）
     json.dump(d, open(SWEEP_LATEST, "w"), ensure_ascii=False, indent=1)
     hist = json.load(open(SWEEP_HISTORY, encoding="utf-8")) if os.path.exists(SWEEP_HISTORY) else []
     hist.append({k: d[k] for k in ("ts", "fx", "servers")})
@@ -226,9 +229,24 @@ def append_vw2_series(ts_iso, value, stock=None):
 
     """② 長期序列（只存飛馬一個數字一筆）——獨立檔案，不受 sweep-history / fm-light 的 400 筆上限影響，
     7 天／30 天窗才不會因為裁切而缺歷史。
-    stock＝當時的市場總掛單量（萬天幣）。寫入一律走 `dd373_series.append_series`（兩條產線共用，
-    每筆都保證有 s；缺 stock 會沿用前值或跳過，不會寫出沒有 s 的筆）。"""
+    stock＝當時的市場總掛單量（萬天幣）。寫入一律走 `dd373_series.append_series`（兩條產線共用）：
+    `v` 永遠照寫，`s` 缺就存 null 並印警告（不沿用上一筆）。"""
     return _series_append(os.path.join(DATA_DIR, "vw2-series.json"), ts_iso, value, stock)
+
+
+def note_sweep_stock(stock):
+    """全服掃描自己的連續缺值計數（跟 15 分輕掃分開），連續 2 次（約 2 小時）沒有掛單量 → 告警一次。
+
+    為什麼要分開：兩支是不同程式、各自抓取與解析，只有一支壞掉時另一支不該把計數歸零。
+    為什麼不是直接 print：`DD373幣價頁發佈` 這支 cron 是 deliver=local（只寫 log，不私訊），
+    所以告警排進 alert-outbox，由每 15 分鐘的輕掃 wrapper flush 成私訊。
+    """
+    streak = note_stock_result(DATA_DIR, "sweep", stock is not None)
+    if stock is None and streak == 2:
+        push_alert(ALERT_SWEEP_2 + f"\n（{dt.datetime.now():%m/%d %H:%M} 這次全服掃描仍沒有掛單量）",
+                   os.path.join(DATA_DIR, "alert-outbox.json"))
+        print("[alert] 全服掃描連續 2 次沒有掛單量 → 已排入私訊", flush=True)
+    return streak
 
 
 def load_vw2_series(hours=24, key="vw2_gold_per_twd"):

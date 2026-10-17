@@ -176,6 +176,106 @@ class LightScanPathTest(unittest.TestCase):
         out = self._record("2026-10-18T03:45:00", 946.0, 16500)[0]
         self.assertEqual(out, "", "恢復了就完全靜默")
 
+    def test_sweep_success_does_not_reset_light_counter(self):
+        """使用者案例：只有輕掃壞掉、全服掃描正常 → 全服不能把輕掃的計數歸零（否則永遠不告警）。"""
+        outs = []
+        for i in range(4):
+            dd373_series.note_stock_result(self.dir, "sweep", True)      # 全服每次都拿到
+            outs.append(self._record(f"2026-10-18T0{3 + i}:00:00", 946.0, None)[0])
+        self.assertIn("連續 4 次", outs[3], "全服正常也要照樣告警")
+        self.assertIn("dd373-fm-light.py", outs[3], "告警要寫明是哪一支程式")
+        self.assertEqual(dd373_series.load_state(self.dir)["sweep"], 0)
+
+
+class AlertStateTest(unittest.TestCase):
+    """各產線分開計數：一條壞掉時另一條不能把它歸零。"""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="vw2state-")
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_light_and_sweep_count_independently(self):
+        for _ in range(3):
+            dd373_series.note_stock_result(self.dir, "light", False)
+        self.assertEqual(dd373_series.load_state(self.dir)["light"], 3)
+        # 全服掃描正常 → 只把 sweep 歸零，light 不受影響
+        dd373_series.note_stock_result(self.dir, "sweep", True)
+        st = dd373_series.load_state(self.dir)
+        self.assertEqual(st["light"], 3, "全服掃描成功不可以把輕掃的計數歸零")
+        self.assertEqual(st["sweep"], 0)
+        self.assertEqual(dd373_series.note_stock_result(self.dir, "light", False), 4)
+
+    def test_streak_resets_on_success(self):
+        for _ in range(2):
+            dd373_series.note_stock_result(self.dir, "sweep", False)
+        self.assertEqual(dd373_series.load_state(self.dir)["sweep"], 2)
+        self.assertEqual(dd373_series.note_stock_result(self.dir, "sweep", True), 0)
+
+
+class OutboxTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp(prefix="vw2outbox-")
+        self.path = os.path.join(self.dir, "alert-outbox.json")
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_push_flush_roundtrip(self):
+        import dd373_alert_outbox as ob
+        ob.push("訊息 A", self.path)
+        ob.push("訊息 B", self.path)
+        self.assertEqual(ob.peek(self.path), ["訊息 A", "訊息 B"])
+        self.assertEqual(ob.flush(self.path), ["訊息 A", "訊息 B"])
+        self.assertEqual(ob.flush(self.path), [], "flush 之後要清空（同一則不重複送）")
+
+
+class SweepAlertTest(unittest.TestCase):
+    """全服掃描（build-page.py）自己的告警：連續 2 次缺 → 排進出件匣一次；輕掃的計數不受影響。"""
+
+    def setUp(self):
+        import importlib.util
+        self.dir = tempfile.mkdtemp(prefix="vw2sweep-")
+        spec = importlib.util.spec_from_file_location("bp_alert", os.path.join(PAGE, "build-page.py"))
+        self.bp = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.bp)
+        self._data = self.bp.DATA_DIR
+        self.bp.DATA_DIR = self.dir
+        import dd373_alert_outbox as ob
+        self.ob = ob
+
+    def tearDown(self):
+        self.bp.DATA_DIR = self._data
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _outbox(self):
+        return self.ob.peek(os.path.join(self.dir, "alert-outbox.json"))
+
+    def test_alert_on_second_consecutive_miss(self):
+        out, _err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.bp.note_sweep_stock(None), 1)
+        self.assertEqual(self._outbox(), [], "第 1 次不告警")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.bp.note_sweep_stock(None), 2)
+        msgs = self._outbox()
+        self.assertEqual(len(msgs), 1, "第 2 次要排一則告警")
+        self.assertIn("全服掃描", msgs[0])
+        self.assertIn("build-page.py", msgs[0])
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.bp.note_sweep_stock(None)          # 第 3 次
+        self.assertEqual(len(self._outbox()), 1, "第 3 次以後不重複")
+
+    def test_success_resets_and_keeps_light_counter(self):
+        dd373_series.note_stock_result(self.dir, "light", False)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.bp.note_sweep_stock(None)
+            self.assertEqual(self.bp.note_sweep_stock(16500), 0)   # 拿到掛單量 → 歸零
+        self.assertEqual(dd373_series.load_state(self.dir)["light"], 1, "輕掃的計數不能被動到")
+        self.assertEqual(self._outbox(), [])
+
 
 class RealDataTest(unittest.TestCase):
     def test_every_row_has_ts_and_v(self):
