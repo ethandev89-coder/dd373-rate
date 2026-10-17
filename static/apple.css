@@ -225,6 +225,8 @@ tr.me td.nm { font-weight: 600; }
 .tt.on { opacity: 1; }
 .tt .t1 { color: var(--label-2); font-size: 12px; }
 .tt .v { font-size: 15px; font-weight: 600; }
+.tt .stk { font-variant-numeric: tabular-nums; }
+.tt .stk .tag { font-size: 11px; padding: 1px 6px; margin-left: 2px; }
 .tt .src { color: var(--label-2); font-size: 12px; }
 
 /* ---------- 其他 ---------- */

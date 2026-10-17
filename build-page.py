@@ -181,7 +181,7 @@ def fetch_sweep(force=False):
          "servers": out, "errs": errs, "cached": False}
     me_out = next((s for s in out if s["server"] == USER_SERVER), None)
     if me_out:
-        append_vw2_series(d["ts"], me_out.get("vw2_gold_per_twd"))     # 記進 ② 長期序列
+        append_vw2_series(d["ts"], me_out.get("vw2_gold_per_twd"), me_out.get("stock_wj"))   # 記進 ② 長期序列（含掛單量）
     json.dump(d, open(SWEEP_LATEST, "w"), ensure_ascii=False, indent=1)
     hist = json.load(open(SWEEP_HISTORY, encoding="utf-8")) if os.path.exists(SWEEP_HISTORY) else []
     hist.append({k: d[k] for k in ("ts", "fx", "servers")})
@@ -201,26 +201,31 @@ def prev_sweep():
 # ---------- 歷史序列（cron 實買口徑，趨勢用） ----------
 
 def agg_series(points, bucket_sec):
-    """降採樣：把實測點聚成固定長度的時段（台北時間對齊），每段取中位數＋min／max＋筆數。
-    points = [(naive_t, v)]；回傳 [(naive_t(段起點), 中位數, min, max, 筆數)]。"""
+    """降採樣：把實測點聚成固定長度的時段（台北時間對齊），每段取中位數＋min／max＋筆數＋掛單量中位數。
+    points = [(naive_t, v, s)]（s＝萬天幣，可為 None）；
+    回傳 [(naive_t(段起點), 中位數, min, max, 筆數, 掛單量中位數)]。"""
     import statistics as st
     buckets = {}
-    for t, v in points:
+    for t, v, s in points:
         k = int((t.replace(tzinfo=TZ).timestamp() + 8 * 3600) // bucket_sec)
-        buckets.setdefault(k, []).append(v)
+        buckets.setdefault(k, []).append((v, s))
     out = []
     for k in sorted(buckets):
-        vs = sorted(buckets[k])
+        rows = buckets[k]
+        vs = sorted(x[0] for x in rows)
+        ss = sorted(x[1] for x in rows if x[1])
         start = k * bucket_sec - 8 * 3600
         out.append((dt.datetime.fromtimestamp(start, TZ).replace(tzinfo=None),
-                    st.median(vs), min(vs), max(vs), len(vs)))
+                    st.median(vs), min(vs), max(vs), len(vs),
+                    st.median(ss) if ss else None))
     return out
 
 
-def append_vw2_series(ts_iso, value):
+def append_vw2_series(ts_iso, value, stock=None):
 
     """② 長期序列（只存飛馬一個數字一筆）——獨立檔案，不受 sweep-history / fm-light 的 400 筆上限影響，
-    7 天／30 天窗才不會因為裁切而缺歷史。"""
+    7 天／30 天窗才不會因為裁切而缺歷史。
+    stock＝當時的市場總掛單量（萬天幣），一起存，fm-light 的 15 分紀錄被裁掉後 tooltip 還是有值。"""
     if not value:
         return
     p = os.path.join(DATA_DIR, "vw2-series.json")
@@ -230,7 +235,10 @@ def append_vw2_series(ts_iso, value):
         ser = []
     key = ts_iso[:16]
     if not any(x.get("ts", "")[:16] == key for x in ser[-3:]):
-        ser.append({"ts": ts_iso, "v": value})
+        row = {"ts": ts_iso, "v": value}
+        if stock:
+            row["s"] = stock
+        ser.append(row)
     json.dump(ser[-9000:], open(p, "w"), ensure_ascii=False)          # 9000 筆 ≈ 93 天（15 分一筆）
 
 
@@ -261,6 +269,71 @@ def load_vw2_series(hours=24, key="vw2_gold_per_twd"):
         pass
     cut = dt.datetime.now() - dt.timedelta(hours=hours)
     return sorted((t, v) for t, v in pts.items() if t >= cut)
+
+
+def _local_naive(iso):
+    """ISO 時戳 → naive 台北時間（截到分鐘）。舊紀錄帶 +08:00，統一換算以免 naive/aware 混用。"""
+    d = dt.datetime.fromisoformat(iso)
+    if d.tzinfo is not None:
+        d = d.astimezone(TZ).replace(tzinfo=None)
+    return d.replace(second=0, microsecond=0)
+
+
+def load_stock_series():
+    """飛馬「市場總掛單量」（stock_wj，單位萬天幣）時間序列。
+    來源優先序（同一分鐘留第一筆）：15 分輕掃 fm-light → 每小時全服 sweep-history → 舊全服紀錄 HISTORY。
+    舊紀錄只到 ~5 小時一筆，所以估算段是「最近一次掃描」的值。"""
+    pts = {}
+    try:                                   # 長期序列自己存過的（最耐久；fm-light 被裁掉後還靠它）
+        for e in json.load(open(os.path.join(DATA_DIR, "vw2-series.json"), encoding="utf-8")):
+            if e.get("s"):
+                pts[_local_naive(e["ts"])] = e["s"]
+    except Exception:
+        pass
+    try:
+        for e in json.load(open(os.path.join(DATA_DIR, "fm-light.json"), encoding="utf-8"))["entries"]:
+            if e.get("stock_wj"):
+                pts.setdefault(_local_naive(e["ts"]), e["stock_wj"])
+    except Exception:
+        pass
+    try:
+        for run in json.load(open(SWEEP_HISTORY, encoding="utf-8")):
+            s = next((x for x in run.get("servers", []) if x.get("server") == USER_SERVER), None)
+            if s and s.get("stock_wj"):
+                pts.setdefault(_local_naive(run["ts"]), s["stock_wj"])
+    except Exception:
+        pass
+    try:
+        for run in json.load(open(HISTORY, encoding="utf-8")).get("runs", []):
+            s = (run.get("servers") or {}).get(USER_SERVER)
+            if s and s.get("stock_wj"):
+                pts.setdefault(_local_naive(run["ts"]), s["stock_wj"])
+    except Exception:
+        pass
+    return sorted(pts.items())
+
+
+class StockIndex:
+    """在掛單量序列裡找「最接近某時間點」的值（超過容許誤差就回 None，不硬套）。"""
+
+    def __init__(self, series):
+        self.t = [p[0] for p in series]
+        self.v = [p[1] for p in series]
+
+    def at(self, t, tol_min=20):
+        import bisect
+        if not self.t:
+            return None
+        i = bisect.bisect_left(self.t, t)
+        best = None
+        for j in (i - 1, i):
+            if 0 <= j < len(self.t):
+                d = abs((self.t[j] - t).total_seconds())
+                if best is None or d < best[0]:
+                    best = (d, self.v[j])
+        if best and best[0] <= tol_min * 60:
+            return best[1]
+        return None
 
 
 def vw2_all_points():
@@ -421,16 +494,21 @@ def build(d, prev):
     est_legend = (f"｜<b>虛線＝估算 ②</b>（9/15 起、由實買 × {r_txt} 換算，非實測）") if est_all else ""
 
     # ---- 走勢圖資料（epoch 秒；時區換算一律在 JS 端 +8h 做）----
+    stock_ser = StockIndex(load_stock_series())             # 掛單量（萬天幣）：tooltip 用
+    all_vw2_s = [(t, v, stock_ser.at(t, 45)) for t, v in all_vw2]   # 實測點：45 分內最近的掛單量（15 分輕掃為主，小時掃描當保險）
     chart_real = hampel([(t, v) for t, v in all_vw2])       # 5 筆 Hampel：主線用平滑值、離群原始值另存
+    real_stock = {t: s for t, _v, s in all_vw2_s}
+    est_stock = {t: stock_ser.at(t, 30) for t, _v in est_all}       # 估算段：30 分內最近的掛單量（舊掃描）
     # 降採樣：7 天窗＝1 小時中位數（＋min–max 帶）；30 天窗＝4 小時
-    agg7 = agg_series([(t, v) for t, v in all_vw2], 3600)
-    agg30 = agg_series([(t, v) for t, v in all_vw2], 4 * 3600)
+    agg7 = agg_series(all_vw2_s, 3600)
+    agg30 = agg_series(all_vw2_s, 4 * 3600)
     # 聚合後的離群標記（5 筆 Hampel，跟原始序列同一套規則）
     chart_agg = {}
     for key, rows in (("7d", agg7), ("30d", agg30)):
-        h = hampel([(t, med) for t, med, _lo, _hi, _n in rows])
+        h = hampel([(t, med) for t, med, _lo, _hi, _n, _s in rows])
         chart_agg[key] = [[ep(t), round(pv, 1), round(raw, 1), 1 if o else 0,
-                           round(rows[i][2], 1), round(rows[i][3], 1), rows[i][4]]
+                           round(rows[i][2], 1), round(rows[i][3], 1), rows[i][4],
+                           round(rows[i][5]) if rows[i][5] is not None else None]
                           for i, (t, pv, raw, o) in enumerate(h)]
 
     # 圖上註記：第 2 次移民期色帶、開始實測直線（時間一律台北）
@@ -443,10 +521,12 @@ def build(d, prev):
     chart_payload = {
         "now": ep(t_now),
         "r": r_used,
-        # [epoch, 平滑值, 原始值, 是否離群]
-        "real": [[ep(t), round(v, 1), round(raw, 1), 1 if o else 0] for t, v, raw, o in chart_real],
-        "est": [[ep(t), round(v, 1)] for t, v in est_all],
-        # 降採樣：[段起點, 中位數(畫線用), 原始中位數, 是否離群, min, max, 筆數]
+        # [epoch, 平滑值, 原始值, 是否離群, 掛單量(萬天幣)]
+        "real": [[ep(t), round(v, 1), round(raw, 1), 1 if o else 0,
+                  round(real_stock[t]) if real_stock.get(t) else None] for t, v, raw, o in chart_real],
+        # [epoch, 值, 掛單量(萬天幣)]
+        "est": [[ep(t), round(v, 1), round(est_stock[t]) if est_stock.get(t) else None] for t, v in est_all],
+        # 降採樣：[段起點, 中位數(畫線用), 原始中位數, 是否離群, min, max, 筆數, 掛單量中位數]
         "agg": chart_agg,
         "notes": chart_notes,
     }

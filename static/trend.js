@@ -36,6 +36,12 @@
   function fmtFull(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
   function isMidnight(t) { var p = tp(t); return p.h === 0 && p.m === 0; }
   function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
+  var THIN_STOCK = 20000;                   // 掛單量 < 2 億天幣＝薄市場（與 Hero tag 同一門檻；單位萬天幣）
+  function fmtStock(v) {                    // 掛單量：萬天幣 → 「1.65 億」／「8,300 萬」
+    if (v === null || v === undefined) return null;
+    return v >= 10000 ? (v / 10000).toFixed(2) + ' 億' : num(v) + ' 萬';
+  }
+  function isThinStock(v) { return v !== null && v !== undefined && v < THIN_STOCK; }
   /* 漲跌方向（台股慣例）：數字變大＝紅 ▲、數字變小＝綠 ▼；
      四捨五入（digits 位）後為 0 就不加箭頭、用灰色。回傳 { cls, arrow, a }，a 已四捨五入。 */
   function dirOf(v, digits) {
@@ -192,15 +198,15 @@
     if (useAgg) {
       real = DATA.agg[win.agg].filter(function (r) { return r[0] >= x0 && r[0] <= now; })
                               .map(function (r) { return { t: r[0], v: r[1], raw: r[2], o: !!r[3],
-                                                           lo: r[4], hi: r[5], n: r[6] }; });
+                                                           lo: r[4], hi: r[5], n: r[6], s: r[7] === undefined ? null : r[7] }; });
       gapReal = win.gapAgg || win.gapReal;              // 聚合後：連續幾個時段沒資料才斷線
     } else {
       real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
-                       .map(function (p) { return { t: p.t, v: p.v, raw: p.raw, o: p.o }; });
+                       .map(function (p) { return { t: p.t, v: p.v, raw: p.raw, o: p.o, s: p.s }; });
       gapReal = win.gapReal;
     }
     var est = DATA.est.filter(function (p) { return p.t >= x0 && p.t <= now; })
-                      .map(function (p) { return { t: p.t, v: p.v }; });
+                      .map(function (p) { return { t: p.t, v: p.v, s: p.s }; });
 
     if (real.length < 2 && est.length < 2) {
       host.innerHTML = '<p class="muted" style="font-size:12px;margin:6px 0">這個時間窗還沒有資料</p>';
@@ -345,9 +351,9 @@
     host.innerHTML = s.join('');
 
     // hover 用的合併序列（實測＋估算，依時間排序；估算本來就在實測之前）
-    var hoverPts = est.map(function (p) { return { t: p.t, v: p.v, raw: p.v, o: false, src: 'est' }; })
+    var hoverPts = est.map(function (p) { return { t: p.t, v: p.v, raw: p.v, o: false, src: 'est', s: p.s }; })
                       .concat(real.map(function (p) {
-                        return { t: p.t, v: p.v, raw: p.raw, o: p.o, src: 'real',
+                        return { t: p.t, v: p.v, raw: p.raw, o: p.o, src: 'real', s: p.s,
                                  lo: p.lo, hi: p.hi, n: p.n };
                       }))
                       .sort(function (a, b) { return a.t - b.t; });
@@ -463,9 +469,14 @@
       difftxt = '較前一筆 <span class="' + dd.cls + '">' + dtxt + '</span>' +
                 (dp ? '（<span class="' + dp.cls + '">' + dp.txt + '</span>）' : '');
     }
+    // 掛單量（市場總掛單）：該時點最近一次掃描的 stock_wj；估算段是舊全服掃描（約 5 小時一筆）
+    var stxt = fmtStock(p.s);
+    var stockHtml = stxt ? '<div class="stk">掛單 ' + stxt +
+                           (isThinStock(p.s) ? ' <span class="tag">薄市場</span>' : '') + '</div>' : '';
     tt.innerHTML =
       '<div class="t1">' + fmtFull(p.t) + '</div>' +
       '<div class="v">' + num(shown) + ' 天幣/元</div>' +
+      stockHtml +
       (difftxt ? '<div>' + difftxt + '</div>' : '') +
       '<div class="src">來源：' + (p.src === 'real' ? '實測' : '估算') +
       (p.n ? '（' + (st.aggLabel || '') + '中位數・' + p.n + ' 筆；區間 ' + num(p.lo) + '–' + num(p.hi) + '）'
@@ -503,8 +514,9 @@
   function renderAll() { WINCFG.forEach(function (win) { render(win, 0); }); }
 
   function normalize(d) {                                 // 內嵌資料用精簡陣列
-    d.real = d.real.map(function (r) { return { t: r[0], v: r[1], raw: r[2] === undefined ? r[1] : r[2], o: !!r[3] }; });
-    d.est = d.est.map(function (r) { return { t: r[0], v: r[1] }; });
+    d.real = d.real.map(function (r) { return { t: r[0], v: r[1], raw: r[2] === undefined ? r[1] : r[2], o: !!r[3],
+                                                s: r[4] === undefined ? null : r[4] }; });
+    d.est = d.est.map(function (r) { return { t: r[0], v: r[1], s: r[2] === undefined ? null : r[2] }; });
     return d;
   }
 
@@ -551,7 +563,8 @@
                         maxLabelPx: maxLabelPx, tickGapPx: tickGapPx, mondayAnchorDay: mondayAnchorDay,
                         niceScale: niceScale, niceStep: niceStep, tickLabel: tickLabel,
                         fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS,
-                        dirOf: dirOf, dirPct: dirPct };
+                        dirOf: dirOf, dirPct: dirPct,
+                        fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK };
 
   var WINCFG = window.DD373WINDOWS || [];
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

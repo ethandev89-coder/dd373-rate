@@ -160,6 +160,14 @@ eq('dirPct(-0.24,false) 括號內不重複箭頭', [T.dirPct(-0.24, false).cls, 
 eq('dirPct(2.54,false)', [T.dirPct(2.54, false).cls, T.dirPct(2.54, false).txt], ['up', '2.5%']);
 eq('dirPct(0.04,false) 持平仍為 0.0%', T.dirPct(0.04, false).txt, '0.0%');
 
+log.push('== tooltip 掛單量（萬天幣 → 億／萬） ==');
+eq('fmtStock(16515) → 1.65 億', T.fmtStock(16515), '1.65 億');
+eq('fmtStock(10000) → 1.00 億', T.fmtStock(10000), '1.00 億');
+eq('fmtStock(8300) → 8,300 萬', T.fmtStock(8300), '8,300 萬');
+eq('fmtStock(null) → null（沒有資料就不顯示那一行）', T.fmtStock(null), null);
+eq('薄市場門檻 2 億：19999 是、20000 不是', [T.isThinStock(19999), T.isThinStock(20000)], [true, false]);
+eq('isThinStock(null) → false', T.isThinStock(null), false);
+
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';
 
