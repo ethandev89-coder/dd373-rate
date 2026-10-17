@@ -108,11 +108,13 @@ cd ~/.hermes/dd373-page && git checkout pre-apple -- build-page.py static/trend.
 - 7 天／30 天窗是聚合時段（1 小時／4 小時）的**中位數**。
 - 掛單量跟著 ② 一起存進 `data/vw2-series.json`（`s` 欄位），fm-light 的 15 分紀錄被裁掉後歷史還有值。
 
-**② 長期序列的寫入規則（每筆都必須有 `s`）**
+**② 長期序列的寫入規則（v 必寫、s 可為 null）**
 - 兩條寫入路徑：每小時整頁掃描（本 repo 的 `build-page.py`）與 15 分鐘輕掃（`~/.hermes/scripts/dd373-fm-light.py`）。兩條**只准**呼叫 `~/.hermes/scripts/dd373_series.py` 的 `append_series()`——唯一寫入點，負責同分鐘去重、9,000 筆上限、原子寫入（tmp + `os.replace`）。
-- 呼叫端沒給掛單量時：沿用序列裡最近的 `s` 並印警告；連可沿用的都沒有就**不寫**（寧可少一個點，也不要留下沒有 `s` 的資料）。
-- 事故記錄：輕掃那條以前自己寫 `{"ts","v"}`，造成 59 筆沒有 `s`（tooltip 少一行「掛單」）。已修；舊資料用 `python3 tools/backfill-series-stock.py` 回填（動筆前備份 `data/vw2-series.json.bak-YYYYmmdd-HHMMSS`，補完逐筆驗證 `ts`／`v`／筆數完全沒變）。
-- 測試：`python3 tests/test-vw2-series.py`（12 項：寫入必帶 `s`、缺值沿用或跳過、同分鐘去重、上限裁切、兩條產線原始碼守門、真實檔案每筆都要有 `ts/v/s`）。`publish.sh` 每次發佈前會跑 `--data-only`，順手回填缺的 `s`，仍缺只在 log 警告（不擋發佈）。
+- `v`（② 幣值）是主要資料：**永遠照寫**，不會因為缺掛單量就跳過整筆。
+- `s`（掛單量，萬天幣）可以缺：缺就存 `null`（**不沿用上一筆**，沿用會讓 tooltip 顯示不是那個時點的數字），寫入時在 log 留警告；tooltip 那一點就不顯示掛單量。產頁端只做「同一分鐘」對應（`load_stock_by_minute()`），不再用鄰近時點硬套。
+- 連續 4 次（輕掃約 1 小時）沒有 `s` → **私訊提醒一次**（`missing_streak()==4` 時印訊息；恢復後重新計數，下次再 4 次才會再提醒）。輕掃的 stderr 寫進 `logs/fm-light.err`，只有 stdout 會變私訊。
+- 事故記錄：輕掃那條以前自己寫 `{"ts","v"}`，造成 59 筆沒有 `s`（tooltip 少一行「掛單」）。那 59 筆已用 `python3 tools/backfill-series-stock.py` 補上（手動工具；先備份 `data/vw2-series.json.bak-*`，補完驗證 `ts`／`v`／筆數沒變）。
+- 測試：`python3 tests/test-vw2-series.py`（17 項：v 必寫、缺 s 存 null 且有警告、不沿用、同分鐘去重、上限、連續缺值判斷、輕掃端到端＋第 4 次才告警一次、原始碼守門、真實檔案每筆都有 `ts/v`）。`publish.sh` 發佈前只驗 `ts/v`（`--data-only`），缺 `ts/v` 才在 log 警告。
 
 **降採樣與圖上註記**
 - 7 天窗：實測聚合成 1 小時中位數；30 天窗：4 小時中位數。淡色帶＝該時段 min–max 區間。滑過去看得到中位數、區間與筆數。

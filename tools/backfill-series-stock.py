@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""把 data/vw2-series.json 裡缺 `s`（市場總掛單量，萬天幣）的筆數補回來。
+"""把 data/vw2-series.json 裡缺 `s`（市場總掛單量，萬天幣）的筆數補回來 —— **手動工具**。
+
+什麼時候用：`s` 現在允許是 `null`（缺就存 null，tooltip 那一點不顯示掛單量，這是刻意設計）。
+只有在「確定掛單解析已經修好／想把歷史補齊」時才手動跑這支；**不要放進 cron 或 publish**
+（自動回填會蓋掉「當時真的抓不到」的事實）。
 
 背景：這檔案有兩條寫入路徑（每小時整頁掃描、15 分鐘輕掃），輕掃那條以前只寫 ts/v，
-造成部分筆數沒有 s（tooltip 的「掛單」那行會少一行）。現在兩條都走
-`~/.hermes/scripts/dd373_series.py` 的 append_series（共用寫入點），這支只負責補舊資料。
+造成 59 筆沒有 s。現在兩條都走 `~/.hermes/scripts/dd373_series.py` 的 append_series，
+缺 s 會存 null（不沿用上一筆），連續 4 次會告警一次。
 
 用法：
   python3 tools/backfill-series-stock.py --dry-run     # 只看會補幾筆

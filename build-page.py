@@ -268,10 +268,14 @@ def _local_naive(iso):
     return d.replace(second=0, microsecond=0)
 
 
-def load_stock_series():
-    """飛馬「市場總掛單量」（stock_wj，單位萬天幣）時間序列。
-    來源優先序（同一分鐘留第一筆）：15 分輕掃 fm-light → 每小時全服 sweep-history → 舊全服紀錄 HISTORY。
-    舊紀錄只到 ~5 小時一筆，所以估算段是「最近一次掃描」的值。"""
+def load_stock_by_minute():
+    """{分鐘: 掛單量（萬天幣）}——只做「同一分鐘」對應，不跨時點硬套。
+
+    tooltip 的語意是「那個時點的掛單量」：`s` 是 null 就讓 tooltip 空著，
+    不要用鄰近時點的值補（會顯示一個不是那個時間的數字）。
+    來源優先序（同一分鐘留第一筆）：vw2-series 的 s → fm-light 的 stock_wj →
+    每小時全服 sweep-history → 舊全服紀錄 HISTORY（估算段那批，約 5 小時一筆）。
+    """
     pts = {}
     try:                                   # 長期序列自己存過的（最耐久；fm-light 被裁掉後還靠它）
         for e in json.load(open(os.path.join(DATA_DIR, "vw2-series.json"), encoding="utf-8")):
@@ -299,30 +303,7 @@ def load_stock_series():
                 pts.setdefault(_local_naive(run["ts"]), s["stock_wj"])
     except Exception:
         pass
-    return sorted(pts.items())
-
-
-class StockIndex:
-    """在掛單量序列裡找「最接近某時間點」的值（超過容許誤差就回 None，不硬套）。"""
-
-    def __init__(self, series):
-        self.t = [p[0] for p in series]
-        self.v = [p[1] for p in series]
-
-    def at(self, t, tol_min=20):
-        import bisect
-        if not self.t:
-            return None
-        i = bisect.bisect_left(self.t, t)
-        best = None
-        for j in (i - 1, i):
-            if 0 <= j < len(self.t):
-                d = abs((self.t[j] - t).total_seconds())
-                if best is None or d < best[0]:
-                    best = (d, self.v[j])
-        if best and best[0] <= tol_min * 60:
-            return best[1]
-        return None
+    return pts
 
 
 def vw2_all_points():
@@ -483,11 +464,11 @@ def build(d, prev):
     est_legend = (f"｜<b>虛線＝估算 ②</b>（9/15 起、由實買 × {r_txt} 換算，非實測）") if est_all else ""
 
     # ---- 走勢圖資料（epoch 秒；時區換算一律在 JS 端 +8h 做）----
-    stock_ser = StockIndex(load_stock_series())             # 掛單量（萬天幣）：tooltip 用
-    all_vw2_s = [(t, v, stock_ser.at(t, 45)) for t, v in all_vw2]   # 實測點：45 分內最近的掛單量（15 分輕掃為主，小時掃描當保險）
+    stock_by_min = load_stock_by_minute()                   # 掛單量（萬天幣）：只對「同一分鐘」
+    all_vw2_s = [(t, v, stock_by_min.get(t)) for t, v in all_vw2]   # s 缺就是 None → tooltip 不顯示掛單量
     chart_real = hampel([(t, v) for t, v in all_vw2])       # 5 筆 Hampel：主線用平滑值、離群原始值另存
     real_stock = {t: s for t, _v, s in all_vw2_s}
-    est_stock = {t: stock_ser.at(t, 30) for t, _v in est_all}       # 估算段：30 分內最近的掛單量（舊掃描）
+    est_stock = {t: stock_by_min.get(t) for t, _v in est_all}       # 估算段：同一分鐘的舊掃描值
     # 降採樣：7 天窗＝1 小時中位數（＋min–max 帶）；30 天窗＝4 小時
     agg7 = agg_series(all_vw2_s, 3600)
     agg30 = agg_series(all_vw2_s, 4 * 3600)
