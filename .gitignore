@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 data/*.bak-*
 data/vw2-series.json.tmp*
+data/stock-alert-state.json
+data/alert-outbox.json
