@@ -145,7 +145,12 @@ def fetch_sweep(force=False):
     out, errs = [], []
     for name, tok in tokens.items():
         try:
-            m = server_rate(tok, fx, sorts=SORTS)
+            # 飛馬掛單可能超過 20 筆（20 條/頁）→ 抓完所有頁，掛單量才不會少算；
+            # 其他 21 台維持 1 頁（見 2026-10-18 使用者實測：飛馬 31 筆只有第 1 頁被讀到）
+            paged = (name == USER_SERVER)
+            m = server_rate(tok, fx, sorts=SORTS, all_pages=paged)
+            for w in (m.get("page") or {}).get("warnings", []):
+                print(f"[warn] {name} 筆數校驗：{w}", flush=True)
             if m.get("err"):
                 errs.append([name, m["err"]])
                 continue
