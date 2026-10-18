@@ -38,6 +38,7 @@ FAKE_AGE_MIN = int(os.environ.get("DD373_FAKE_AGE_MIN", "0"))   # 測試用：�
 HISTORY = os.path.join(HOME, ".hermes", "data", "dd373-multiserver-history.json")
 SWEEP_LATEST = os.path.join(DATA_DIR, "sweep-latest.json")
 SWEEP_HISTORY = os.path.join(DATA_DIR, "sweep-history.json")
+STOCK_FULL = os.path.join(DATA_DIR, "stock-full.json")   # 每日全頁掃描的掛單量（22 台可比）
 CACHE_MIN = 45          # 快取新鮮度（分鐘）：build 比 sweep 跑得頻繁時不重抓
 USER_SERVER = "飛馬珀伽索斯"
 TARGET_WJ = 5000.0      # ② 口徑固定：買滿 5,000 萬天幣
@@ -254,6 +255,22 @@ def note_sweep_stock(stock):
     return streak
 
 
+def load_stock_full():
+    """每日一次「全頁」掃描的掛單量 → {服名: 萬天幣}；讀不到回 {}。
+
+    每小時掃描只讀第 1 頁（20 筆），各服實際 23~49 筆 → 掛單量只算到 41~87%，
+    比例每服不同 → 全服排行的掛單量不能互相比。這支檔案由
+    `~/.hermes/scripts/dd373-stock-full.py`（每天一次、22 台都抓完所有頁）產生；
+    缺檔／該服沒值就退回 sweep 的數字（寧可顯示舊口徑，也不要空白）。
+    """
+    try:
+        d = json.load(open(STOCK_FULL, encoding="utf-8"))
+    except Exception:
+        return {}
+    return {n: v["stock_wj"] for n, v in (d.get("servers") or {}).items()
+            if v.get("ok") and v.get("stock_wj")}
+
+
 def load_vw2_series(hours=24, key="vw2_gold_per_twd"):
     """② 口徑序列：優先讀長期檔 vw2-series.json，再補上 sweep-history／fm-light（去重）。"""
     pts = {}
@@ -442,6 +459,7 @@ def build(d, prev):
     n_servers = len(by_vw)
     me = next((x for x in by_vw if x["server"] == USER_SERVER), None)
     order = ([me] if me else []) + [x for x in by_vw if x is not me]
+    full_stock = load_stock_full()          # 每日全頁掃描（缺就退回 sweep 的第 1 頁值）
     rank_rows = []
     for srv in order:
         o = prev_by_name.get(srv["server"])
@@ -455,7 +473,8 @@ def build(d, prev):
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
             f'<span class="dl {srv_cls}">{dl_txt}</span></div>'
             f'<div class="rline2">最低一筆 {srv["low_gold_per_twd"]:,.0f}'
-            f' ・ 掛單 {srv["stock_wj"] / 10000:.2f} 億天幣'
+            f' ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">'
+            f'掛單 {(srv["stock_wj"] if is_me else full_stock.get(srv["server"], srv["stock_wj"])) / 10000:.2f} 億天幣</span>'
             f'</div></div>')
 
 
@@ -664,7 +683,7 @@ def build(d, prev):
 {ranking_block}
 <footer>
   產生時間 {now:%Y/%m/%d %H:%M:%S} ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD {fx:.4f}<br>
-  飛馬每 15 分鐘、全服每小時更新。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+  飛馬每 15 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
 {chart_block}
 </body>
