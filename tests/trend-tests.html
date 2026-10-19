@@ -168,6 +168,14 @@ eq('fmtStock(null) → null（沒有資料就不顯示那一行）', T.fmtStock(
 eq('薄市場門檻 2 億：19999 是、20000 不是', [T.isThinStock(19999), T.isThinStock(20000)], [true, false]);
 eq('isThinStock(null) → false', T.isThinStock(null), false);
 
+log.push('== 掛單量柱：右軸刻度與口徑分界 ==');
+eq('fmtStockAxis(0) → 0', T.fmtStockAxis(0), '0');
+eq('fmtStockAxis(20000) → 2 億（整億不帶小數）', T.fmtStockAxis(20000), '2 億');
+eq('fmtStockAxis(15000) → 1.5 億', T.fmtStockAxis(15000), '1.5 億');
+eq('fmtStockAxis(50000) → 5 億', T.fmtStockAxis(50000), '5 億');
+eq('口徑分界＝台北 2026-10-18 11:07（epoch）', T.STOCK_BREAK, Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000));
+eq('柱狀區佔繪圖高度 30%（貼底部）', T.BAR_ZONE, 0.3);
+
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';
 

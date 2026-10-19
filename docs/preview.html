@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>飛馬珀伽索斯 天幣幣值（DD373）</title>
+<style>
+/* ============================================================================
+   天幣幣值頁 — 蘋果風設計系統（B 階段）
+   規則：
+     - 所有顏色只寫在 :root（淺色）與 @media (prefers-color-scheme: dark) 兩處，
+       其他地方一律用 var(--xxx)，不得出現寫死的色碼。
+     - 圖表是 JS 畫的 SVG，元素只掛 class，顏色／線寬／字級全部由這張表決定
+       ⇒ 深淺色切換時 CSS 變數自己會變，圖表不用重讀顏色也會跟著變。
+     - 字體不載入外部字型（單檔、無外部依賴）；數字用 tabular-nums 對齊。
+     - 圓角 12（主卡 16）、不用陰影、不用漸層（圖表面積淡出除外）；
+       間距只用 4／8／12／16／24／32；頁面左右 16；桌機內容最寬 960 置中。
+   ========================================================================== */
+:root {
+  color-scheme: light dark;
+  --bg: #F2F2F7;
+  --card: #FFFFFF;
+  --card-2: #F2F2F7;
+  --label: #000000;
+  --label-2: rgba(60, 60, 67, .6);
+  --label-3: rgba(60, 60, 67, .3);
+  --sep: rgba(60, 60, 67, .29);
+  --fill: rgba(118, 118, 128, .12);
+  --accent: #007AFF;
+  --gray: #8E8E93;
+  --ok: #34C759;
+  --warn: #FF9500;
+  --bad: #FF3B30;
+  --on-accent: #FFFFFF;          /* 主色底上的文字（徽章、膠囊） */
+  --seg-sel: #FFFFFF;            /* 分段控制「選中」的小方塊 */
+  --warn-soft: rgba(255, 149, 0, .12);
+  --up: #D70015;                 /* 漲跌（台股慣例）：數字變大＝紅 ▲ */
+  --down: #248A3D;               /* 數字變小＝綠 ▼ */
+  --up-soft: rgba(215, 0, 21, .12);
+  --down-soft: rgba(36, 138, 61, .12);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1C1C1E;
+    --card-2: #2C2C2E;
+    --label: #FFFFFF;
+    --label-2: rgba(235, 235, 245, .6);
+    --label-3: rgba(235, 235, 245, .3);
+    --sep: rgba(84, 84, 88, .6);
+    --fill: rgba(118, 118, 128, .24);
+    --accent: #0A84FF;
+    --gray: #8E8E93;
+    --ok: #30D158;
+    --warn: #FF9F0A;
+    --bad: #FF453A;
+    --seg-sel: #636366;
+    --warn-soft: rgba(255, 159, 10, .16);
+    --up: #FF453A;
+    --down: #30D158;
+    --up-soft: rgba(255, 69, 58, .12);
+    --down-soft: rgba(48, 209, 88, .12);
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  padding: 16px 16px 32px;
+  background: var(--bg);
+  color: var(--label);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang TC",
+        "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 1024px) { body { max-width: 960px; margin: 0 auto; padding-bottom: 32px; } }
+
+a { color: var(--accent); text-decoration: none; }
+
+/* ---------- 預覽版橫幅 ---------- */
+.preview-banner {
+  margin: -16px -16px 16px;
+  padding: 8px 16px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 13px;
+  text-align: center;
+}
+.preview-banner a { color: var(--warn); text-decoration: underline; }
+
+/* ---------- 標題 ---------- */
+header { margin: 0 0 16px; }
+h1 { font-size: 28px; font-weight: 700; letter-spacing: -.4px; margin: 0 0 4px; }
+.sub { color: var(--label-2); font-size: 14px; }
+h2 {
+  font-size: 20px; font-weight: 600; margin: 0 0 12px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between;
+}
+h2 span { font-size: 13px; font-weight: 400; color: var(--label-2); }
+h3 { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 16px;
+}
+.card.accent, .card.lg { border-radius: 16px; }
+.notes div { font-size: 13px; color: var(--label-2); margin: 4px 0; }
+.muted { color: var(--label-2); }
+
+/* ---------- 狀態膠囊／Tag ---------- */
+.capsule {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--fill); border-radius: 999px; padding: 4px 12px;
+  font-size: 13px; color: var(--label-2);
+}
+.capsule .d { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+.capsule.warn { color: var(--warn); }
+.capsule.warn .d { background: var(--warn); }
+.capsule.bad { color: var(--bad); }
+.capsule.bad .d { background: var(--bad); }
+.tag {
+  display: inline-block; font-size: 12px; color: var(--warn);
+  background: var(--warn-soft); border-radius: 6px; padding: 2px 8px;
+}
+
+/* ---------- KPI 格（C 階段會換成 Hero 卡） ---------- */
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 4px 0 12px; }
+.kpi { background: var(--card-2); border-radius: 12px; padding: 12px; }
+.kpi label { display: block; font-size: 12px; color: var(--label-2); }
+.kpi b { display: block; font-size: 24px; font-weight: 600; line-height: 1.25; }
+.kpi i { font-size: 13px; font-style: normal; color: var(--label-2); }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(4, 1fr); } }
+.pri { color: var(--accent); font-weight: 600; }
+td.pri, th.pri { color: var(--accent); }
+td.pri { background: var(--fill); }
+
+/* 漲跌：台股慣例——數字變大（1 台幣換到更多天幣）＝紅 ▲、數字變小＝綠 ▼；
+   四捨五入為 0.0% 時用灰色、不加箭頭。只用在漲跌小字與膠囊，大數字不上色。 */
+.up { color: var(--up); }
+.down { color: var(--down); }
+.flat { color: var(--label-2); }
+
+/* ---------- 全服排行（C 階段改成群組列表；此處先套色票） ---------- */
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; border-bottom: .5px solid var(--sep); text-align: right; white-space: nowrap; }
+th { font-size: 12px; font-weight: 500; color: var(--label-2); position: sticky; top: 0; background: var(--card); }
+td.nm, th.nm { text-align: left; font-size: 14px; color: var(--label); }
+td.rk { color: var(--label-3); font-size: 12px; width: 20px; }
+td.sm { font-size: 12px; color: var(--label-2); }
+td.hi { font-weight: 600; }
+tr.me { background: var(--fill); }
+tr.me td.nm { font-weight: 600; }
+.mobs { display: block; }
+.full { display: none; }
+@media (min-width: 700px) { .mobs { display: none; } .full { display: block; } }
+.mrow { padding: 8px 2px; border-bottom: .5px solid var(--sep); }
+.mrow.me { background: var(--fill); border-radius: 8px; padding: 8px; }
+.mline1 { display: flex; align-items: baseline; gap: 8px; }
+.mline1 .rk { color: var(--label-3); font-size: 12px; width: 16px; flex: none; }
+.mline1 .nm { flex: 1; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mline1 .nm.me { font-weight: 600; }
+.mline1 .vw { font-weight: 600; font-size: 16px; flex: none; }
+.mline1 .dl { font-size: 12px; text-align: right; flex: none; min-width: 58px; }
+.mline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+
+/* ---------- 分段控制（iOS UISegmentedControl） ---------- */
+.tabs input { display: none; }
+.tabbar {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  background: var(--fill); border-radius: 9px; padding: 2px; height: 32px; margin: 0 0 12px;
+}
+.tabbar label {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--label); border-radius: 7px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#tr24:checked ~ .tabbar label[for=tr24],
+#tr48:checked ~ .tabbar label[for=tr48],
+#tr7:checked ~ .tabbar label[for=tr7],
+#tr30:checked ~ .tabbar label[for=tr30] { background: var(--seg-sel); font-weight: 600; }
+.panels > .panel { display: none; }
+#tr24:checked ~ .panels .p24,
+#tr48:checked ~ .panels .p48,
+#tr7:checked ~ .panels .p7,
+#tr30:checked ~ .panels .p30 { display: block; }
+
+/* ---------- 走勢圖 ---------- */
+.chart { position: relative; width: 100%; margin: 0; touch-action: pan-y; }
+.chart svg { display: block; }
+.chart svg .grid { stroke: var(--sep); stroke-width: 1; }
+.chart svg .ytick, .chart svg .xtick { fill: var(--label-2); font-size: 11px; }
+.chart svg .stop-top { stop-color: var(--accent); stop-opacity: .20; }
+.chart svg .stop-bot { stop-color: var(--accent); stop-opacity: 0; }
+.chart svg .line-est { fill: none; stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart svg .line-real { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart svg .outlier { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.chart svg .band { fill: var(--accent); fill-opacity: .10; stroke: none; }
+.chart svg .badge { fill: var(--accent); }
+.chart svg .badge-t { fill: var(--on-accent); font-size: 12px; font-weight: 700; }
+.chart svg .cross { stroke: var(--sep); stroke-width: 1; pointer-events: none; }
+.chart svg .cross-dot { fill: var(--accent); stroke: var(--card); stroke-width: 1.5; pointer-events: none; }
+.chart svg .note-band { fill: var(--fill); }
+.chart svg .note-line { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.chart svg .note-txt { fill: var(--label-2); font-size: 11px; }
+/* 掛單量柱（貼圖底）：橘色＝現行口徑；灰＝10/18 11:07 前只抓第 1 頁的舊口徑 */
+.chart svg .bar { fill: var(--warn); fill-opacity: .45; stroke: none; }
+.chart svg .bar-old { fill: var(--gray); fill-opacity: .45; }
+.chart svg .thin-stock { stroke: var(--label-2); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart svg .stock-grid { stroke: var(--sep); stroke-width: 1; }
+.chart svg .stock-tick { fill: var(--label-2); font-size: 10px; }
+.chart svg .stock-axis { fill: var(--label-2); font-size: 10px; }
+
+/* 圖例（分段控制下方同一行） */
+.lgd { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--label-2); margin: 0 0 8px; }
+.lgd .li { display: inline-flex; align-items: center; gap: 8px; }
+.lgd svg { display: block; }
+.lgd .lg-real { stroke: var(--accent); stroke-width: 2; }
+.lgd .lg-est { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.lgd .lg-band { fill: var(--accent); fill-opacity: .10; }
+.lgd .lg-bar { fill: var(--warn); fill-opacity: .55; }
+.lgd .lg-bar-old { fill: var(--gray); fill-opacity: .45; }
+
+/* 本時窗摘要（圖上方一行） */
+.wsum { font-size: 13px; color: var(--label-2); margin: 0 0 4px; }
+.wsum b { color: var(--label); font-weight: 600; }
+
+/* 十字線 tooltip */
+.tt {
+  position: absolute; z-index: 3; pointer-events: none; opacity: 0;
+  transition: opacity .12s ease;
+  /* 用 --card-2：tooltip 疊在同為 --card 的走勢卡上，若用 --card 會完全看不見（深色模式實測） */
+  background: var(--card-2); color: var(--label);
+  border: .5px solid var(--sep); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; line-height: 1.45; white-space: nowrap;
+}
+.tt.on { opacity: 1; }
+.tt .t1 { color: var(--label-2); font-size: 12px; }
+.tt .v { font-size: 15px; font-weight: 600; }
+.tt .stk { font-variant-numeric: tabular-nums; }
+.tt .stk .tag { font-size: 11px; padding: 1px 6px; margin-left: 2px; }
+.tt .src { color: var(--label-2); font-size: 12px; }
+
+/* ---------- 其他 ---------- */
+.movers { margin: 0; padding-left: 16px; font-size: 14px; color: var(--label-2); }
+.movers li { margin: 2px 0; }
+.movers b { color: var(--label); font-weight: 600; }
+.split { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 640px) { .split { grid-template-columns: 1fr 1fr; } }
+footer { color: var(--label-3); font-size: 12px; margin-top: 16px; line-height: 1.6; }
+
+/* ============================================================================
+   C 階段：頁面結構（導覽列／大標／Hero／群組列表／details／頁尾）
+   ========================================================================== */
+
+/* ---------- 導覽列：sticky、毛玻璃 ---------- */
+.nav {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -16px -16px 16px; padding: 12px 16px;
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.nav-t { font-size: 17px; font-weight: 600; }
+
+/* ---------- 頁面大標 ---------- */
+.page-head { margin: 0 0 16px; }
+.page-head .sub { margin: 0; }
+
+/* ---------- Hero 卡 ---------- */
+.hero-n { display: flex; align-items: baseline; gap: 8px; }
+.hero-n b { font-size: 48px; font-weight: 600; letter-spacing: -.5px; line-height: 1.05; }
+.hero-n span { font-size: 17px; color: var(--label-2); }
+@media (min-width: 1024px) { .hero-n b { font-size: 56px; } }
+
+/* ---------- Hero：股票 App 式（大數字＋漲跌膠囊／iOS 列表） ---------- */
+.hero-main { min-width: 0; }
+.hero-chg { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.chg-pill {
+  background: var(--fill); color: var(--label); font-weight: 600;
+  border-radius: 8px; padding: 4px 8px; font-size: 15px;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* 膠囊：漲跌用同色約 12% 底；0.0% 用灰底灰字、不加箭頭 */
+.chg-pill.up { background: var(--up-soft); color: var(--up); }
+.chg-pill.down { background: var(--down-soft); color: var(--down); }
+.chg-pill.flat { background: var(--fill); color: var(--label-2); }
+.chg-when { font-size: 13px; color: var(--label-2); }
+.hero-list { margin: 16px 0 0; }
+.hero-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 12px 0 12px 16px;
+  border-bottom: .5px solid var(--sep); font-size: 16px;
+}
+.hero-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.hero-row .hl { color: var(--label-2); white-space: nowrap; }
+.hero-row .hv { color: var(--label); font-weight: 600; white-space: nowrap; text-align: right; }
+.hero-row .hl .tag { font-weight: 400; margin-left: 6px; }
+@media (min-width: 560px) {                     /* 桌機：大數字在左、列表在右（約 200px）垂直置中 */
+  .card.hero { display: flex; align-items: center; gap: 24px; }
+  .hero-main { flex: 1; }
+  .hero-list { flex: none; min-width: 200px; margin: 0; }   /* 寬度隨最寬一列（掛單＋薄市場 tag）自動長，數值仍與右緣對齊 */
+}
+
+/* ---------- 群組列表（iOS Settings 樣式） ---------- */
+.glist { margin: 0; padding: 0; }
+.grow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 44px; padding: 12px 0 12px 16px;
+  border-bottom: .5px solid var(--sep); font-size: 16px;
+}
+.grow:last-child { border-bottom: 0; }
+.grow .gv { color: var(--label-2); text-align: right; }
+.grow .gv b { color: var(--label); font-weight: 600; }
+
+/* ---------- 全服排行列 ---------- */
+.rrow { min-height: 44px; padding: 12px 0 12px 16px; border-bottom: .5px solid var(--sep); }
+.rrow:last-child { border-bottom: 0; }
+.rrow.me { background: var(--fill); border-radius: 8px; padding-left: 12px; padding-right: 12px; }
+.rline1 { display: flex; align-items: baseline; gap: 8px; }
+.rline1 .rk { color: var(--label-3); font-size: 12px; min-width: 20px; }
+.rline1 .nm {
+  flex: 1; font-size: 16px; color: var(--label); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rrow.me .rline1 .nm { color: var(--accent); font-weight: 600; }
+.rline1 .vw { font-weight: 600; font-size: 16px; }
+.rline1 .dl { font-size: 13px; min-width: 56px; text-align: right; }   /* 顏色由 .up／.down／.flat 決定 */
+.rline2 { font-size: 12px; color: var(--label-2); margin-top: 2px; }
+
+/* ---------- details（全服排行） ---------- */
+details.dsc > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 44px; font-size: 20px; font-weight: 600;
+  cursor: pointer; list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+details.dsc > summary::-webkit-details-marker { display: none; }
+details.dsc > summary .dsub {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; font-weight: 400; color: var(--label-2);
+}
+details.dsc > summary .dsub::after {
+  content: "›"; font-size: 17px; color: var(--label-3);
+  transition: transform .15s ease;
+}
+details.dsc[open] > summary .dsub::after { transform: rotate(90deg); }
+.dbody { margin-top: 12px; }
+
+
+/* ---------- 手機不換行（Hero 三格、群組列表標籤） ---------- */
+.hero-row .hl, .grow > span:first-child { white-space: nowrap; }
+
+/* ---------- 圖例：離群點與說明泡泡 ---------- */
+.lgd .li[data-tip] { cursor: pointer; }
+.lgd .lg-out { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+.lgtip {
+  position: absolute; z-index: 6; max-width: 260px;
+  background: var(--card-2); color: var(--label);
+  border: .5px solid var(--sep); border-radius: 10px;
+  padding: 8px 12px; font-size: 13px; line-height: 1.45;
+}
+
+/* ---------- 說明泡泡 ---------- */
+[data-tip] { cursor: pointer; }
+
+.notice {
+  margin: 0 0 16px; padding: 12px; border-radius: 12px;
+  background: var(--warn-soft); color: var(--warn); font-size: 13px;
+}
+</style>
+</head>
+<body>
+<div class="preview-banner">預覽版・資料停在 10/19 14:22（<span data-ts="1792390925" data-rel="1">39 分鐘前</span>）　正式版：<a href="./index.html">index.html</a></div>
+<nav class="nav">
+  <span class="nav-t">天幣幣值</span>
+  <span class="capsule warn" data-fresh><span class="d"></span><span data-ts="1792390925" data-rel="1">資料延遲</span></span>
+</nav>
+
+<div class="notice bad" id="stale-banner" hidden></div>
+<header class="page-head">
+  <h1>飛馬珀伽索斯</h1>
+  <p class="sub" data-tip="從最便宜的掛單一路往上買，湊滿 5,000 萬天幣的平均價；數字越大＝天幣越便宜">DD373 · 買滿 5,000 萬天幣加權</p>
+</header>
+
+<section class="card lg hero">
+  <div class="hero-main">
+    <div class="hero-n"><b>967</b><span>天幣/元</span></div>
+    <div class="hero-chg"><span class="chg-pill up">▲ 3.8%</span><span class="chg-when">24 小時</span></div>
+  </div>
+  <div class="hero-list">
+    <div class="hero-row"><span class="hl" data-tip="全部掛單裡最便宜的一筆，小額才買得到這個價">最低一筆</span><span class="hv">985</span></div>
+    <div class="hero-row"><span class="hl">掛單（天幣）</span><span class="hv">3.45 億</span></div>
+  </div>
+</section>
+
+<section class="card lg">
+  <div class="tabs">
+    <input type="radio" name="tr" id="tr24" checked>
+    <input type="radio" name="tr" id="tr48">
+    <input type="radio" name="tr" id="tr7">
+    <input type="radio" name="tr" id="tr30">
+    <div class="tabbar">
+      <label for="tr24">24 小時</label><label for="tr48">48 小時</label><label for="tr7">7 天</label><label for="tr30">30 天</label>
+    </div>
+    <div class="lgd">
+      <span class="li"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-real" d="M1,4 H19"/></svg>實測</span>
+      <span class="li" data-tip="10/14 19:01 以前沒有實測，用舊的實買序列 × 1.0003 換算；看趨勢可以，單點數字別當真"><svg width="20" height="8" viewBox="0 0 20 8" aria-hidden="true"><path class="lg-est" d="M1,4 H19"/></svg>估算</span>
+      <span class="li" data-tip="單次掃描偏離前後中位數太多，主線用中位數，圈圈標原始值"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><circle class="lg-out" cx="6" cy="6" r="3.6"/></svg>離群點</span>
+    </div>
+    <div class="panels">
+      <div class="panel p24"><div class="wsum" data-win="24h"></div><div class="chart" data-win="24h"></div></div>
+      <div class="panel p48"><div class="wsum" data-win="48h"></div><div class="chart" data-win="48h"></div></div>
+      <div class="panel p7"><div class="wsum" data-win="7d"></div><div class="chart" data-win="7d"></div></div>
+      <div class="panel p30"><div class="wsum" data-win="30d"></div><div class="chart" data-win="30d"></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <details class="dsc">
+    <summary><span>全服排行</span><span class="dsub">飛馬第 22／22 名</span></summary>
+    <div class="dbody glist"><div class="rrow me"><div class="rline1"><span class="rk">22</span><span class="nm">飛馬珀伽索斯</span><span class="vw">967</span><span class="dl down">▼ 1.4%</span></div><div class="rline2">最低一筆 985 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 3.45 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">1</span><span class="nm">月亮女神阿緹蜜斯</span><span class="vw">1,680</span><span class="dl up">▲ 0.9%</span></div><div class="rline2">最低一筆 1,680 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 4.25 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">2</span><span class="nm">公牛克里特</span><span class="vw">1,649</span><span class="dl down">▼ 0.6%</span></div><div class="rline2">最低一筆 1,660 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 3.77 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">3</span><span class="nm">獅子涅墨亞</span><span class="vw">1,648</span><span class="dl flat">0.0%</span></div><div class="rline2">最低一筆 1,654 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 1.63 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">4</span><span class="nm">半人馬涅索斯</span><span class="vw">1,646</span><span class="dl up">▲ 0.4%</span></div><div class="rline2">最低一筆 1,660 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 4.78 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">5</span><span class="nm">戰神馬爾斯</span><span class="vw">1,646</span><span class="dl up">▲ 1.2%</span></div><div class="rline2">最低一筆 1,654 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 3.39 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">6</span><span class="nm">天后海拉</span><span class="vw">1,643</span><span class="dl down">▼ 0.1%</span></div><div class="rline2">最低一筆 1,648 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 6.88 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">7</span><span class="nm">地獄犬刻耳柏洛斯</span><span class="vw">1,625</span><span class="dl up">▲ 0.2%</span></div><div class="rline2">最低一筆 1,654 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 7.67 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">8</span><span class="nm">勝利女神雅典娜</span><span class="vw">1,606</span><span class="dl flat">0.0%</span></div><div class="rline2">最低一筆 1,606 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 1.77 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">9</span><span class="nm">水蛇許德拉</span><span class="vw">1,593</span><span class="dl up">▲ 0.2%</span></div><div class="rline2">最低一筆 1,600 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 5.65 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">10</span><span class="nm">蛇髮女墨杜沙</span><span class="vw">1,572</span><span class="dl up">▲ 0.1%</span></div><div class="rline2">最低一筆 1,602 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 3.81 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">11</span><span class="nm">海神波塞頓</span><span class="vw">1,550</span><span class="dl flat">0.0%</span></div><div class="rline2">最低一筆 1,554 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 4.25 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">12</span><span class="nm">愛神邱比特</span><span class="vw">1,539</span><span class="dl up">▲ 0.3%</span></div><div class="rline2">最低一筆 1,543 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 4.90 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">13</span><span class="nm">天神宙斯</span><span class="vw">1,532</span><span class="dl up">▲ 0.7%</span></div><div class="rline2">最低一筆 1,533 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 7.70 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">14</span><span class="nm">太陽神阿波羅</span><span class="vw">1,514</span><span class="dl down">▼ 0.3%</span></div><div class="rline2">最低一筆 1,531 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 6.40 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">15</span><span class="nm">獨眼巨人庫克羅普斯</span><span class="vw">1,424</span><span class="dl flat">0.0%</span></div><div class="rline2">最低一筆 1,426 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 4.83 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">16</span><span class="nm">泰坦女神瑞亞</span><span class="vw">1,335</span><span class="dl down">▼ 0.4%</span></div><div class="rline2">最低一筆 1,360 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 3.50 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">17</span><span class="nm">收獲女神蒂蜜特</span><span class="vw">1,308</span><span class="dl up">▲ 0.1%</span></div><div class="rline2">最低一筆 1,311 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 3.29 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">18</span><span class="nm">火神赫發斯特斯</span><span class="vw">1,267</span><span class="dl down">▼ 0.2%</span></div><div class="rline2">最低一筆 1,272 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 8.16 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">19</span><span class="nm">美神維納斯</span><span class="vw">1,242</span><span class="dl down">▼ 0.2%</span></div><div class="rline2">最低一筆 1,244 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 2.04 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">20</span><span class="nm">牛人彌諾陶洛斯</span><span class="vw">1,148</span><span class="dl up">▲ 0.3%</span></div><div class="rline2">最低一筆 1,186 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 1.88 億天幣</span></div></div><div class="rrow"><div class="rline1"><span class="rk">21</span><span class="nm">冥王黑帝斯</span><span class="vw">1,099</span><span class="dl up">▲ 0.7%</span></div><div class="rline2">最低一筆 1,103 ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">掛單 2.32 億天幣</span></div></div></div>
+  </details>
+</section>
+<footer>
+  產生時間 2026/10/19 15:01:10 ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD 4.8379<br>
+  飛馬每 15 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+</footer>
+<script type="application/json" id="chart-data">{"now":1792393271,"r":1.00032,"real":[[1791975660,945.3,945.3,0,30512],[1791976080,944.0,944.0,0,30068],[1791977580,942.6,942.6,0,15930],[1791980760,944.3,944.3,0,16017],[1791983280,942.3,942.3,0,16317],[1791984120,941.9,941.9,0,15942],[1791984180,941.9,941.9,0,15942],[1791985020,937.3,937.3,0,14495],[1791985920,928.2,928.2,0,22275],[1791986820,928.3,928.3,0,20374],[1791987720,930.7,930.7,0,14754],[1791987840,930.7,930.7,0,14754],[1791988620,928.8,928.8,0,20624],[1791989520,930.2,930.2,0,18494],[1791990420,934.9,934.9,0,24335],[1791991320,940.1,940.1,0,24335],[1791991440,940.1,940.1,0,24335],[1791992220,942.5,942.5,0,21460],[1791993120,943.6,943.6,0,21050],[1791994020,949.7,949.7,0,22160],[1791994920,949.7,949.7,0,21750],[1791995160,947.1,947.1,0,24720],[1791995820,946.1,946.1,0,24526],[1791996720,942.6,942.6,0,23656],[1791997620,944.0,950.6,1,24363],[1791998520,944.0,944.0,0,23063],[1791998760,944.0,944.0,0,23063],[1791999420,942.4,942.4,0,23063],[1792000320,942.4,942.4,0,23063],[1792001220,942.4,942.4,0,22863],[1792002120,936.3,936.3,0,21661],[1792003020,936.3,936.3,0,22361],[1792003920,937.3,937.3,0,22436],[1792004820,937.9,937.9,0,22436],[1792005660,937.9,937.9,0,22436],[1792005720,937.9,937.9,0,22436],[1792006620,936.3,936.3,0,22361],[1792007520,936.3,936.3,0,22361],[1792008420,936.3,936.3,0,22361],[1792009260,936.3,936.3,0,22361],[1792009320,936.3,936.3,0,22361],[1792010220,936.3,936.3,0,22361],[1792011120,936.3,936.3,0,22361],[1792012020,936.3,936.3,0,22361],[1792012920,936.3,936.3,0,22361],[1792013820,936.3,936.3,0,22361],[1792014720,936.3,936.3,0,22361],[1792015620,933.9,933.9,0,18861],[1792016520,933.7,933.7,0,18791],[1792017420,933.7,933.7,0,18791],[1792018320,933.7,933.7,0,18791],[1792019220,933.7,933.7,0,18791],[1792020120,933.7,933.7,0,18791],[1792020420,933.7,933.7,0,18791],[1792021020,933.7,933.7,0,18791],[1792021920,933.7,933.7,0,18791],[1792022820,933.7,933.7,0,18791],[1792023720,930.0,930.0,0,19091],[1792023780,930.0,930.0,0,19091],[1792024620,930.0,930.0,0,19091],[1792025520,930.0,930.0,0,19091],[1792026420,927.9,927.9,0,19065],[1792027320,927.9,927.9,0,19065],[1792027380,927.9,927.9,0,19065],[1792028220,928.2,928.2,0,17165],[1792029120,928.1,929.0,1,17275],[1792030020,928.1,928.1,0,17105],[1792030920,923.9,923.9,0,16055],[1792031220,923.9,923.9,0,16055],[1792031820,923.9,923.9,0,16055],[1792032720,925.5,925.5,0,16555],[1792033620,926.3,926.3,0,16795],[1792034520,924.6,924.6,0,16295],[1792034640,924.6,924.6,0,16295],[1792035420,929.4,929.4,0,17195],[1792036320,930.8,930.8,0,18255],[1792037220,927.1,927.1,0,17355],[1792038120,925.7,925.7,0,17013],[1792038300,925.7,925.7,0,17013],[1792039020,923.1,923.1,0,16213],[1792039920,923.2,923.2,0,17193],[1792040820,923.7,923.7,0,19963],[1792041720,923.7,928.0,1,20963],[1792041960,924.0,928.0,1,20963],[1792042620,923.7,923.7,0,19963],[1792043520,924.0,924.0,0,19963],[1792044420,924.0,924.0,0,19963],[1792045320,925.1,925.1,0,17048],[1792045500,925.1,925.1,0,17048],[1792046220,924.0,924.0,0,18963],[1792047120,917.1,917.1,0,15433],[1792048020,897.3,897.3,0,13493],[1792048920,907.7,907.7,0,14323],[1792049040,899.2,863.0,1,10933],[1792049820,899.2,899.2,0,15445],[1792050720,901.5,901.5,0,15345],[1792051620,893.1,893.1,0,15167],[1792052460,876.5,876.5,0,13717],[1792052520,876.5,876.5,0,13717],[1792053420,876.1,876.1,0,13717],[1792054320,879.2,879.2,0,15457],[1792055220,879.2,879.2,0,15457],[1792056120,878.5,878.5,0,11167],[1792056360,878.5,878.5,0,11167],[1792057020,872.2,872.2,0,11167],[1792057920,872.2,872.2,0,11167],[1792058820,873.1,873.1,0,11567],[1792059720,873.1,873.1,0,11567],[1792060620,877.8,877.8,0,12363],[1792061520,879.1,879.1,0,12421],[1792062420,879.1,879.1,0,11761],[1792063320,881.5,881.5,0,11702],[1792063500,881.5,881.5,0,11702],[1792064220,881.4,881.4,0,11754],[1792065120,882.8,882.8,0,11774],[1792066020,883.5,883.5,0,12041],[1792066920,885.8,885.8,0,12713],[1792067820,890.4,890.4,0,12720],[1792068720,894.2,894.2,0,12920],[1792069620,897.2,897.2,0,12749],[1792070460,898.8,898.8,0,12899],[1792070520,898.8,898.8,0,12899],[1792071420,903.0,903.0,0,12646],[1792072320,904.6,904.6,0,12651],[1792073220,903.0,918.7,1,12987],[1792074120,902.4,902.4,0,10727],[1792074360,902.4,902.4,0,10727],[1792075020,903.9,903.9,0,11927],[1792075920,910.6,910.6,0,12475],[1792076820,917.7,917.7,0,12475],[1792077720,907.9,907.9,0,10338],[1792077780,907.9,907.9,0,10338],[1792078620,936.5,936.5,0,15187],[1792079520,936.5,936.5,0,15187],[1792080420,936.5,936.5,0,15857],[1792081260,936.5,936.5,0,16276],[1792081320,936.5,936.5,0,16276],[1792082220,936.5,936.5,0,16211],[1792083120,936.5,936.5,0,16211],[1792084020,936.5,936.5,0,16211],[1792084920,936.5,936.5,0,19619],[1792085040,936.5,936.5,0,19619],[1792085820,936.5,936.5,0,19605],[1792086720,935.0,935.0,0,18605],[1792087620,935.0,935.0,0,18605],[1792088520,935.0,935.0,0,18605],[1792089420,921.1,921.1,0,18301],[1792090320,921.1,921.1,0,18525],[1792091220,921.1,921.1,0,18525],[1792092120,921.1,921.1,0,18525],[1792092240,921.1,921.1,0,18525],[1792093020,921.1,921.1,0,18525],[1792093920,921.1,921.1,0,18525],[1792094820,921.1,921.1,0,18525],[1792095720,921.1,921.1,0,18525],[1792095840,921.1,921.1,0,18525],[1792096620,921.1,921.1,0,18525],[1792097520,921.1,921.1,0,18525],[1792098420,921.1,921.1,0,18525],[1792099320,921.1,921.1,0,18525],[1792099380,921.1,921.1,0,18525],[1792100220,921.1,921.1,0,18525],[1792101120,921.1,921.1,0,18525],[1792102020,921.1,921.1,0,18525],[1792102920,921.1,921.1,0,18525],[1792103220,921.1,921.1,0,18525],[1792103820,920.5,920.5,0,18525],[1792104720,920.5,920.5,0,18525],[1792105620,920.5,920.5,0,18525],[1792106520,919.4,919.4,0,18431],[1792107420,919.4,919.4,0,18531],[1792108320,919.4,919.4,0,18531],[1792109220,910.3,910.3,0,17535],[1792110120,908.2,908.2,0,17545],[1792110240,899.0,899.0,0,16601],[1792111020,890.4,890.4,0,15456],[1792111920,889.8,889.8,0,15056],[1792112820,888.0,888.0,0,14791],[1792113720,886.3,886.3,0,14291],[1792113900,886.3,886.3,0,14291],[1792114620,882.9,882.9,0,12831],[1792115520,882.5,882.5,0,11661],[1792116420,882.5,882.5,0,11661],[1792117320,882.9,882.9,0,11921],[1792117560,882.9,882.9,0,11921],[1792118220,885.7,885.7,0,11921],[1792119120,891.8,891.8,0,13071],[1792120020,894.9,894.9,0,15124],[1792120920,895.7,895.7,0,16104],[1792121040,896.2,896.2,0,16548],[1792121820,896.5,896.5,0,15747],[1792122720,896.2,896.2,0,15747],[1792123620,896.2,896.2,0,15747],[1792124520,896.7,896.7,0,14876],[1792125420,897.1,897.1,0,13941],[1792126320,899.8,899.8,0,14431],[1792127220,899.8,899.8,0,14431],[1792128120,900.5,900.5,0,16646],[1792128360,900.5,900.5,0,16883],[1792129020,900.5,900.5,0,15833],[1792129920,900.5,900.5,0,15833],[1792130820,901.1,901.1,0,16033],[1792131720,901.1,901.1,0,16033],[1792131840,901.1,901.1,0,16033],[1792132620,901.1,901.1,0,16033],[1792133520,901.1,901.1,0,16033],[1792134420,902.6,902.6,0,18076],[1792135320,902.6,902.6,0,20056],[1792136220,902.6,902.6,0,17156],[1792137120,902.6,902.6,0,22064],[1792138020,902.6,902.6,0,18244],[1792138920,903.1,903.1,0,18379],[1792139160,903.1,903.1,0,18379],[1792139820,903.1,903.1,0,18779],[1792140720,903.3,903.3,0,18389],[1792141620,903.1,903.1,0,18602],[1792142520,902.9,902.9,0,17751],[1792142760,903.1,903.1,0,15931],[1792143420,903.2,903.2,0,15393],[1792144320,905.3,905.3,0,15825],[1792145220,906.9,906.9,0,15755],[1792146120,908.2,908.2,0,14218],[1792146180,908.2,908.2,0,14218],[1792147020,911.0,911.0,0,14294],[1792147920,911.0,911.0,0,13872],[1792148820,909.9,909.9,0,13682],[1792149720,909.4,909.4,0,16123],[1792150620,909.0,909.0,0,12910],[1792151520,909.5,909.5,0,13489],[1792152420,915.6,915.6,0,13387],[1792153320,917.1,917.1,0,12810],[1792153620,917.1,917.1,0,12810],[1792154220,917.7,917.7,0,12949],[1792155120,923.3,923.3,0,13136],[1792156020,932.2,932.2,0,13020],[1792156860,938.5,938.5,0,13369],[1792156920,938.5,938.5,0,14099],[1792157820,939.1,939.1,0,14921],[1792158720,939.2,939.2,0,14107],[1792159620,939.6,939.6,0,14207],[1792160520,943.0,943.0,0,13601],[1792160580,943.0,943.0,0,13601],[1792161420,943.3,943.3,0,12511],[1792162320,944.9,944.9,0,11301],[1792163220,945.5,945.5,0,10506],[1792164120,941.1,941.1,0,13398],[1792164300,940.8,940.8,0,13527],[1792165020,934.8,934.8,0,15347],[1792165920,943.9,943.9,0,13507],[1792166820,937.2,937.2,0,15027],[1792167660,939.5,939.5,0,15327],[1792167720,939.5,939.5,0,15327],[1792168620,933.9,933.9,0,15477],[1792169520,935.9,935.9,0,15927],[1792170420,943.3,943.3,0,16197],[1792171320,943.7,943.7,0,16373],[1792172220,943.7,943.7,0,16373],[1792173120,943.7,943.7,0,16373],[1792174020,943.7,943.7,0,16373],[1792174380,944.5,944.5,0,16023],[1792174920,944.5,944.5,0,16023],[1792175820,944.5,944.5,0,16023],[1792176720,944.2,944.2,0,16423],[1792177620,944.2,944.2,0,16423],[1792178520,944.2,944.2,0,16423],[1792178580,944.2,944.2,0,16423],[1792179420,944.2,944.2,0,16423],[1792180320,944.3,944.3,0,15523],[1792181220,944.2,944.2,0,15523],[1792182120,944.2,944.2,0,16253],[1792183020,944.2,944.2,0,16253],[1792183920,944.2,944.2,0,16253],[1792184820,944.2,944.2,0,16253],[1792185660,944.2,944.2,0,18813],[1792185720,944.2,944.2,0,18813],[1792186620,944.2,944.2,0,18813],[1792187520,944.2,944.2,0,18813],[1792188420,944.2,944.2,0,18813],[1792189320,944.2,944.2,0,18813],[1792189500,944.2,944.2,0,18813],[1792190220,944.2,944.2,0,18913],[1792191120,944.2,944.2,0,18913],[1792192020,944.2,944.2,0,18913],[1792192860,944.6,944.6,0,19373],[1792192920,944.6,944.6,0,19373],[1792193820,944.8,944.8,0,16563],[1792194720,944.8,944.8,0,16563],[1792195620,944.9,944.9,0,15179],[1792196520,940.8,940.8,0,15179],[1792196580,940.0,940.0,0,15329],[1792197420,941.4,941.4,0,15548],[1792198320,940.7,940.7,0,15110],[1792199220,940.7,939.8,1,14660],[1792200120,940.7,940.7,0,15150],[1792201020,940.9,940.9,0,14897],[1792201920,941.0,941.0,0,15087],[1792202820,940.1,940.1,0,14577],[1792203720,940.1,940.1,0,14577],[1792204020,942.3,942.3,0,16957],[1792204620,942.3,942.3,0,15957],[1792205520,940.7,940.7,0,13757],[1792206420,939.7,939.7,0,18110],[1792207320,939.9,939.9,0,18380],[1792207440,939.9,939.9,0,18380],[1792208220,939.6,939.6,0,17880],[1792209120,940.1,940.1,0,16799],[1792210020,940.3,940.3,0,16799],[1792210920,940.4,940.4,0,16549],[1792210980,940.4,940.4,0,16549],[1792211820,939.8,939.8,0,16603],[1792212720,939.8,939.8,0,16603],[1792213620,932.1,932.1,0,19064],[1792214520,938.2,938.2,0,19817],[1792214580,938.2,938.2,0,19817],[1792215420,934.2,934.2,0,19170],[1792216320,935.0,935.0,0,19394],[1792217220,933.2,933.2,0,18864],[1792218120,934.0,934.0,0,19094],[1792218300,934.0,934.0,0,19094],[1792219020,936.4,936.4,0,18798],[1792219920,940.6,940.6,0,19798],[1792220820,940.9,940.9,0,19608],[1792221720,940.9,940.9,0,19220],[1792221780,940.9,940.9,0,19220],[1792222620,940.7,940.7,0,19120],[1792223520,940.2,940.2,0,18908],[1792224420,941.1,941.1,0,18958],[1792225320,942.8,942.8,0,16927],[1792225560,942.8,942.8,0,16927],[1792226220,942.8,943.3,1,17441],[1792227120,943.2,943.2,0,18007],[1792228020,942.7,942.7,0,20799],[1792228860,942.9,942.9,0,20799],[1792228920,942.9,942.9,0,20799],[1792229820,942.1,942.1,0,18389],[1792230720,942.2,942.2,0,18389],[1792231620,941.9,941.9,0,20010],[1792232520,941.8,941.8,0,17129],[1792232760,941.8,941.8,0,17129],[1792233420,942.2,942.2,0,16024],[1792234320,942.1,942.1,0,15699],[1792235220,943.7,943.7,0,16094],[1792236120,945.2,945.2,0,16977],[1792236420,945.2,945.2,0,15676],[1792237020,945.2,945.2,0,16986],[1792237920,944.2,944.2,0,17179],[1792238820,944.3,944.3,0,16286],[1792239720,944.5,944.5,0,16447],[1792239840,944.5,944.5,0,16447],[1792240620,944.6,944.6,0,16447],[1792241520,945.1,945.1,0,16085],[1792242420,946.3,946.3,0,17868],[1792243320,946.3,946.3,0,18073],[1792243380,946.3,946.3,0,18073],[1792244220,946.5,948.1,1,18260],[1792245120,946.6,946.6,0,19281],[1792246020,946.5,946.5,0,18876],[1792246920,946.8,946.8,0,19095],[1792247160,947.0,947.0,0,19131],[1792247820,947.0,947.0,0,17295],[1792248720,948.5,948.5,0,18336],[1792249620,948.4,947.6,1,15616],[1792250520,948.4,948.4,0,14066],[1792250760,948.4,948.4,0,14066],[1792251420,948.6,948.6,0,12513],[1792252320,948.6,948.6,0,12402],[1792253220,948.8,948.8,0,12542],[1792254120,948.3,948.3,0,11842],[1792254300,947.8,947.8,0,10282],[1792255020,945.8,945.8,0,10878],[1792255920,946.0,946.0,0,11286],[1792256820,945.3,945.3,0,11638],[1792257720,946.5,946.5,0,11578],[1792257780,946.5,946.5,0,11578],[1792258620,946.5,946.5,0,11578],[1792259520,946.5,946.5,0,11578],[1792260420,946.5,946.5,0,11578],[1792261320,946.5,946.5,0,11878],[1792261500,946.5,946.5,0,11878],[1792262220,946.5,946.5,0,11878],[1792263120,946.7,946.7,0,11678],[1792264020,946.6,946.6,0,11938],[1792264920,946.4,946.4,0,12638],[1792265040,946.4,946.4,0,12638],[1792265820,946.4,946.4,0,12338],[1792266120,946.4,946.4,0,12338],[1792266300,946.4,946.4,0,12338],[1792266720,946.4,946.4,0,12338],[1792267620,946.4,946.4,0,12338],[1792268460,946.4,946.4,0,12338],[1792268520,946.4,946.4,0,12338],[1792269420,946.4,946.4,0,12338],[1792270320,946.4,946.4,0,12338],[1792271220,946.4,946.4,0,12338],[1792272120,946.4,946.4,0,11438],[1792272360,946.4,946.4,0,11438],[1792273020,946.4,946.4,0,11438],[1792273920,946.4,946.4,0,11438],[1792274820,946.4,946.4,0,11438],[1792275720,946.4,946.4,0,11438],[1792275960,946.4,946.4,0,11438],[1792276620,946.4,946.4,0,11438],[1792277520,946.4,946.4,0,11438],[1792278420,946.4,946.4,0,12138],[1792279320,947.2,947.2,0,13088],[1792279380,947.2,947.2,0,13088],[1792280220,947.2,947.2,0,13088],[1792281120,947.2,947.2,0,13088],[1792282020,947.6,947.6,0,14022],[1792282920,945.5,945.5,0,14208],[1792283040,945.5,945.5,0,14208],[1792283820,945.5,945.5,0,14208],[1792284720,945.5,945.5,0,13728],[1792285620,945.5,945.5,0,13748],[1792286520,945.5,945.5,0,13748],[1792286640,946.3,946.3,0,13924],[1792287420,943.7,943.7,0,14748],[1792288320,943.0,935.7,1,16276],[1792289220,942.7,942.7,0,15100],[1792290060,943.0,943.0,0,17300],[1792290120,945.0,945.0,0,15740],[1792291020,947.4,947.4,0,18750],[1792291920,947.3,944.8,1,13650],[1792292820,947.3,947.3,0,31331],[1792293720,947.3,947.3,0,31331],[1792294620,947.3,947.3,0,31621],[1792295520,948.4,948.4,0,33621],[1792296420,961.4,961.4,0,46521],[1792297260,961.4,961.4,0,43941],[1792297320,961.4,961.4,0,43941],[1792298220,961.4,961.4,0,45271],[1792299120,961.4,961.4,0,42336],[1792300020,961.4,961.4,0,43655],[1792300920,942.7,942.7,0,28503],[1792300980,942.7,942.7,0,28503],[1792301820,943.0,943.0,0,28693],[1792302720,943.9,943.9,0,30492],[1792303620,948.4,948.4,0,36337],[1792304520,948.6,948.6,0,36208],[1792304580,948.6,948.6,0,36208],[1792305420,948.6,948.6,0,37208],[1792306320,949.0,949.0,0,38384],[1792307220,950.3,950.3,0,38984],[1792308120,950.2,950.2,0,35448],[1792308180,950.2,950.2,0,35448],[1792309020,951.2,951.2,0,37783],[1792309920,952.2,952.2,0,39047],[1792310820,952.2,952.2,0,39047],[1792311720,953.6,953.6,0,37847],[1792311960,953.7,953.7,0,38347],[1792312620,955.3,955.3,0,38347],[1792313520,955.0,955.0,0,38047],[1792314420,955.1,955.1,0,38161],[1792315320,955.0,956.5,1,38493],[1792315560,954.7,954.7,0,37379],[1792316220,954.7,954.7,0,37379],[1792317120,954.6,954.6,0,38152],[1792318020,954.6,954.6,0,37652],[1792318920,955.5,955.5,0,38588],[1792319160,955.5,955.5,0,38588],[1792319820,955.5,955.5,0,35183],[1792320720,956.1,956.1,0,35725],[1792321620,957.0,957.0,0,36546],[1792322520,957.0,957.0,0,35746],[1792322700,957.0,957.0,0,35746],[1792323420,959.2,959.2,0,37446],[1792324320,960.6,960.6,0,39517],[1792325220,965.1,965.1,0,39707],[1792326120,966.1,966.1,0,40413],[1792326300,969.1,969.1,0,41363],[1792327020,969.8,969.8,0,45578],[1792327920,970.5,970.5,0,44817],[1792328820,970.8,970.8,0,44675],[1792329720,976.7,976.7,0,46175],[1792329780,976.7,976.7,0,46175],[1792330620,978.5,978.5,0,47238],[1792331520,984.2,984.2,0,47127],[1792332420,990.8,990.8,0,42725],[1792333260,990.4,990.4,0,41086],[1792333320,990.4,990.4,0,41086],[1792334220,990.0,990.0,0,40855],[1792335120,990.6,990.6,0,31260],[1792336020,996.4,996.4,0,32047],[1792336920,995.7,995.7,0,31582],[1792337100,980.7,980.7,0,28925],[1792337820,973.4,973.4,0,27348],[1792338720,963.4,963.4,0,23243],[1792339620,966.8,966.8,0,23893],[1792340520,969.0,969.0,0,24350],[1792341420,970.6,970.6,0,24320],[1792342320,970.6,970.6,0,22820],[1792343220,954.8,954.8,0,18953],[1792344120,955.0,955.0,0,19027],[1792344240,955.0,955.0,0,19027],[1792345020,953.2,953.2,0,19897],[1792345920,955.7,955.7,0,20062],[1792346820,956.6,956.6,0,20062],[1792347720,957.3,957.3,0,20177],[1792347900,957.3,957.3,0,20177],[1792348620,957.3,957.3,0,20177],[1792349520,958.7,958.7,0,21417],[1792350420,958.7,958.7,0,21417],[1792351320,958.7,958.7,0,21417],[1792352220,958.7,958.7,0,21417],[1792353120,958.7,958.7,0,21417],[1792354020,958.7,958.7,0,21417],[1792354920,958.7,958.7,0,21417],[1792354980,958.7,958.7,0,21417],[1792355820,958.7,958.7,0,21417],[1792356720,958.7,958.7,0,21417],[1792357620,958.7,958.7,0,21417],[1792358520,958.5,958.5,0,21517],[1792359420,958.5,958.5,0,21517],[1792360320,958.5,958.5,0,21517],[1792361220,958.5,958.5,0,21517],[1792362120,958.5,958.5,0,21517],[1792362180,958.5,958.5,0,21517],[1792363020,958.5,958.5,0,21517],[1792363920,958.5,958.5,0,21517],[1792364820,958.5,958.5,0,21517],[1792365660,958.5,958.5,0,21517],[1792365720,958.5,958.5,0,21517],[1792366620,958.5,958.5,0,21517],[1792367520,958.5,958.5,0,21517],[1792368420,958.5,958.5,0,25117],[1792369320,958.8,958.8,0,25208],[1792369440,958.8,958.8,0,25208],[1792370220,959.6,959.6,0,25408],[1792371120,957.5,957.5,0,24828],[1792372020,957.8,957.8,0,25228],[1792372920,958.0,958.0,0,25228],[1792373820,958.0,958.0,0,25228],[1792374720,956.5,956.5,0,25208],[1792375620,958.9,958.9,0,29724],[1792376520,958.9,958.9,0,36224],[1792376700,958.9,958.9,0,36924],[1792377420,959.1,959.1,0,37744],[1792378320,959.4,959.4,0,38144],[1792379220,960.1,960.1,0,38590],[1792380120,960.4,960.4,0,37135],[1792381020,961.8,961.8,0,37518],[1792381920,961.9,961.9,0,36375],[1792382820,970.3,970.3,0,37832],[1792383600,971.1,971.1,0,38082],[1792383720,972.0,972.0,0,38082],[1792384620,975.4,975.4,0,37752],[1792385520,979.2,979.2,0,37295],[1792386420,977.6,977.6,0,37130],[1792387320,982.0,982.0,0,40604],[1792387500,980.5,980.5,0,40204],[1792388220,960.8,960.8,0,33142],[1792389120,966.2,966.2,0,33505],[1792390020,965.7,965.7,0,33505],[1792390920,966.6,966.6,0,34505],[1792391820,967.6,967.6,0,34714],[1792392720,967.6,984.6,1,38772]],"est":[[1789471320,1280.4,28736],[1789471680,1280.4,29936],[1789484400,1323.4,26530],[1789513200,1254.4,30218],[1789531200,1289.4,38764],[1789552800,1366.4,61357],[1789570800,1430.5,38284],[1789599600,1431.5,36200],[1789617600,1439.5,27972],[1789639200,1506.5,26870],[1789657200,1538.5,35596],[1789686000,1505.5,51173],[1789704000,1535.5,31444],[1789725600,1473.5,83317],[1789743600,1482.5,75563],[1789772400,1473.5,71646],[1789790400,1495.5,52307],[1789812000,1473.5,53391],[1789830060,1482.5,50743],[1789858800,1473.5,67149],[1789869240,1488.5,62237],[1789876800,1488.5,55947],[1789898400,1493.5,54544],[1789916400,1493.5,57794],[1789945200,1493.5,55500],[1789963200,1498.5,50489],[1789966860,1498.5,52569],[1789984800,1488.5,67564],[1790002800,1482.5,36438],[1790031600,1452.5,57449],[1790049600,1333.4,56020],[1790071200,1413.4,43953],[1790089200,1443.5,40200],[1790118000,1387.4,42550],[1790136000,1448.5,42651],[1790157600,1478.5,49199],[1790175600,1489.5,21186],[1790204400,1473.5,41590],[1790222400,1489.5,26303],[1790244000,1517.5,43005],[1790262000,1489.5,47330],[1790290860,1462.5,50142],[1790308800,1459.5,46251],[1790330400,1508.5,52062],[1790348400,1506.5,52507],[1790377200,1506.5,50147],[1790395200,1507.5,43447],[1790416800,1518.5,20773],[1790434800,1507.5,17763],[1790463600,1507.5,48467],[1790481600,1508.5,43193],[1790503200,1496.5,51990],[1790521200,1507.5,42102],[1790550000,1476.5,48306],[1790568000,1477.5,55892],[1790589600,1450.5,43384],[1790607600,1460.5,57025],[1790636400,1465.5,56037],[1790654400,1468.5,49631],[1790676000,1468.5,40203],[1790694000,1453.5,59396],[1790722800,1409.4,66652],[1790735940,1122.4,86231],[1790740800,1076.3,119109],[1790762400,1241.4,75025],[1790780400,1208.4,115550],[1790809200,1137.4,129269],[1790827200,1163.4,76515],[1790848800,1171.4,93499],[1790866800,1190.4,95060],[1790895600,1198.4,51965],[1790913600,1210.4,56064],[1790935200,1224.4,33515],[1790953200,1238.4,27325],[1790982000,1245.4,33428],[1791000000,1260.4,63741],[1791021600,1307.4,71619],[1791039600,1319.4,69121],[1791068400,1328.4,71936],[1791086400,1341.4,48168],[1791108000,1363.4,42659],[1791126000,1403.4,39318],[1791154800,1370.4,39433],[1791172800,1370.4,34156],[1791194400,1379.4,53043],[1791212400,1385.4,36504],[1791241200,1370.4,56538],[1791259200,1364.4,46683],[1791280800,1364.4,46930],[1791298800,1366.4,97076],[1791327600,1316.4,94419],[1791345600,1138.4,66681],[1791367200,1153.4,78994],[1791385200,1115.4,37073],[1791414000,1097.3,34273],[1791432000,1108.4,35553],[1791453600,1098.3,24871],[1791471600,1099.3,10765],[1791500400,1053.3,11367],[1791518400,1054.3,19386],[1791540000,965.3,13256],[1791558000,1036.3,33048],[1791586800,965.3,16316],[1791604800,963.3,64074],[1791626400,954.3,67836],[1791644400,967.3,70292],[1791673200,963.3,61400],[1791691200,864.3,50499],[1791712800,913.3,51692],[1791730800,963.3,12596],[1791759600,947.3,47502],[1791777600,972.3,13309],[1791799200,1000.3,23573],[1791817200,995.3,18810],[1791846000,995.3,23599],[1791864000,999.3,22324],[1791885600,999.3,28645],[1791903600,976.3,25714],[1791932400,964.3,22544],[1791950400,931.3,24819],[1791972000,943.3,28832]],"agg":{"7d":[[1791975600,944.0,944.0,0,942.6,945.3,3,30068],[1791979200,944.3,944.3,0,944.3,944.3,1,16017],[1791982800,941.9,941.9,0,928.2,942.3,5,15942],[1791986400,941.9,930.2,1,928.3,930.7,5,18494],[1791990000,940.1,940.1,0,934.9,943.6,5,24335],[1791993600,947.1,947.1,0,942.6,949.7,5,23656],[1791997200,944.0,944.0,0,942.4,950.6,5,23063],[1792000800,936.8,936.8,0,936.3,942.4,4,22398],[1792004400,937.9,937.9,0,936.3,937.9,5,22436],[1792008000,936.3,936.3,0,936.3,936.3,5,22361],[1792011600,936.3,936.3,0,936.3,936.3,4,22361],[1792015200,933.7,933.7,0,933.7,933.9,4,18791],[1792018800,933.7,933.7,0,933.7,933.7,5,18791],[1792022400,930.0,930.0,0,930.0,933.7,5,19091],[1792026000,927.9,927.9,0,927.9,929.0,5,19065],[1792029600,923.9,923.9,0,923.9,928.1,5,16055],[1792033200,926.3,926.3,0,924.6,930.8,5,16795],[1792036800,924.0,925.7,1,923.1,927.1,5,17013],[1792040400,924.0,924.0,0,923.7,928.0,5,19963],[1792044000,924.0,924.0,0,917.1,925.1,5,17048],[1792047600,899.2,899.2,0,863.0,907.7,5,14323],[1792051200,876.5,876.5,0,876.1,893.1,5,13717],[1792054800,878.5,878.5,0,872.2,879.2,5,11167],[1792058400,875.5,875.5,0,873.1,879.1,4,11965],[1792062000,881.5,881.5,0,879.1,882.8,5,11754],[1792065600,888.1,888.1,0,883.5,894.2,4,12716],[1792069200,898.8,898.8,0,897.2,904.6,5,12749],[1792072800,903.9,903.9,0,902.4,918.7,5,11927],[1792076400,917.7,917.7,0,907.9,936.5,5,12475],[1792080000,936.5,936.5,0,936.5,936.5,5,16211],[1792083600,936.5,936.5,0,935.0,936.5,5,19605],[1792087200,928.0,928.0,0,921.1,935.0,4,18565],[1792090800,921.1,921.1,0,921.1,921.1,5,18525],[1792094400,921.1,921.1,0,921.1,921.1,5,18525],[1792098000,921.1,921.1,0,921.1,921.1,5,18525],[1792101600,921.1,921.1,0,920.5,921.1,5,18525],[1792105200,919.4,919.4,0,919.4,920.5,4,18528],[1792108800,899.0,899.0,0,889.8,910.3,5,16601],[1792112400,886.3,886.3,0,882.5,888.0,5,14291],[1792116000,896.2,882.9,1,882.5,891.8,5,11921],[1792119600,896.2,896.2,0,894.9,896.5,5,15747],[1792123200,896.9,896.9,0,896.2,899.8,4,14654],[1792126800,900.5,900.5,0,899.8,900.5,5,15833],[1792130400,901.1,901.1,0,901.1,901.1,5,16033],[1792134000,902.6,902.6,0,902.6,902.6,4,19066],[1792137600,903.1,903.1,0,902.6,903.3,5,18379],[1792141200,903.1,903.1,0,902.9,905.3,5,15931],[1792144800,908.2,908.2,0,906.9,911.0,5,14218],[1792148400,909.5,909.5,0,909.0,909.9,4,13586],[1792152000,917.1,917.1,0,915.6,923.3,5,12949],[1792155600,938.5,938.5,0,932.2,939.2,5,14099],[1792159200,943.0,943.0,0,939.6,944.9,5,13601],[1792162800,941.1,941.1,0,934.8,945.5,5,13507],[1792166400,937.2,937.2,0,933.9,939.5,5,15327],[1792170000,943.7,943.7,0,943.3,943.7,4,16373],[1792173600,944.5,944.5,0,943.7,944.5,5,16023],[1792177200,944.2,944.2,0,944.2,944.3,5,16423],[1792180800,944.2,944.2,0,944.2,944.2,4,16253],[1792184400,944.2,944.2,0,944.2,944.2,5,18813],[1792188000,944.2,944.2,0,944.2,944.2,5,18813],[1792191600,944.6,944.6,0,944.2,944.8,5,18913],[1792195200,940.8,940.8,0,940.0,944.9,5,15179],[1792198800,940.8,940.8,0,939.8,941.0,4,14992],[1792202400,940.7,940.7,0,940.1,942.3,5,14577],[1792206000,939.9,939.9,0,939.6,940.1,5,18110],[1792209600,940.3,940.3,0,939.8,940.4,5,16603],[1792213200,939.9,935.0,1,932.1,938.2,5,19394],[1792216800,934.0,934.0,0,933.2,940.6,5,19094],[1792220400,940.9,940.9,0,940.2,940.9,5,19220],[1792224000,942.8,942.8,0,941.1,943.3,5,17441],[1792227600,942.7,942.7,0,942.1,942.9,5,20799],[1792231200,941.9,941.9,0,941.8,942.2,5,17129],[1792234800,945.2,945.2,0,943.7,945.2,5,16977],[1792238400,944.5,944.5,0,944.3,945.1,5,16447],[1792242000,946.3,946.3,0,946.3,948.1,5,18073],[1792245600,947.0,947.0,0,946.5,948.5,5,18876],[1792249200,948.4,948.4,0,947.6,948.6,5,14066],[1792252800,947.8,947.8,0,945.8,948.8,5,11286],[1792256400,946.5,946.5,0,945.3,946.5,5,11578],[1792260000,946.5,946.5,0,946.5,946.7,5,11878],[1792263600,946.4,946.4,0,946.4,946.6,7,12338],[1792267200,946.4,946.4,0,946.4,946.4,5,12338],[1792270800,946.4,946.4,0,946.4,946.4,5,11438],[1792274400,946.4,946.4,0,946.4,946.4,5,11438],[1792278000,947.2,947.2,0,946.4,947.2,5,13088],[1792281600,945.5,945.5,0,945.5,947.6,5,14208],[1792285200,945.5,945.5,0,935.7,946.3,5,13924],[1792288800,944.8,944.8,0,942.7,947.4,5,15740],[1792292400,947.3,947.3,0,947.3,948.4,4,31476],[1792296000,947.3,961.4,1,961.4,961.4,5,43941],[1792299600,943.0,943.0,0,942.7,961.4,5,28693],[1792303200,948.6,948.6,0,948.4,949.0,5,36337],[1792306800,950.3,950.3,0,950.2,952.2,5,37783],[1792310400,953.7,953.7,0,952.2,955.3,5,38347],[1792314000,954.7,954.7,0,954.6,956.5,5,38152],[1792317600,955.5,955.5,0,954.6,956.1,5,37652],[1792321200,957.0,957.0,0,957.0,960.6,5,36546],[1792324800,969.1,969.1,0,965.1,970.5,5,41363],[1792328400,976.7,976.7,0,970.8,984.2,5,46175],[1792332000,990.4,990.4,0,990.0,990.8,5,41086],[1792335600,980.7,980.7,0,963.4,996.4,5,28925],[1792339200,969.8,969.8,0,966.8,970.6,4,24106],[1792342800,955.0,955.0,0,953.2,955.7,5,19027],[1792346400,957.3,957.3,0,956.6,958.7,5,20177],[1792350000,958.7,958.7,0,958.7,958.7,4,21417],[1792353600,958.7,958.7,0,958.7,958.7,5,21417],[1792357200,958.5,958.5,0,958.5,958.7,4,21517],[1792360800,958.5,958.5,0,958.5,958.5,5,21517],[1792364400,958.5,958.5,0,958.5,958.5,5,21517],[1792368000,958.8,958.8,0,957.5,959.6,5,25208],[1792371600,957.9,957.9,0,956.5,958.0,4,25228],[1792375200,958.9,958.9,0,958.9,959.4,5,36924],[1792378800,961.1,961.1,0,960.1,961.9,4,37326],[1792382400,972.0,972.0,0,970.3,979.2,5,37832],[1792386000,977.6,977.6,0,960.8,982.0,5,37130],[1792389600,967.1,967.1,0,965.7,984.6,4,34610]],"30d":[[1791964800,944.0,944.0,0,942.6,945.3,3,30068],[1791979200,938.7,938.7,0,928.2,944.3,16,19434],[1791993600,942.4,942.4,0,936.3,950.6,19,22436],[1792008000,935.1,935.1,0,933.7,936.3,18,20611],[1792022400,928.0,928.0,0,923.9,933.7,20,17235],[1792036800,923.9,923.9,0,863.0,928.0,20,17048],[1792051200,878.5,878.5,0,872.2,893.1,19,11761],[1792065600,903.0,903.0,0,883.5,936.5,19,12651],[1792080000,935.0,935.0,0,921.1,936.5,19,18525],[1792094400,921.1,921.1,0,919.4,921.1,19,18525],[1792108800,890.1,890.1,0,882.5,910.3,20,14924],[1792123200,900.8,900.8,0,896.2,902.6,18,16033],[1792137600,905.3,905.3,0,902.6,911.0,19,15825],[1792152000,939.2,939.2,0,915.6,945.5,20,13392],[1792166400,943.7,943.7,0,933.9,944.5,19,16197],[1792180800,944.2,944.2,0,944.2,944.8,19,18813],[1792195200,940.7,940.7,0,939.6,944.9,19,15179],[1792209600,939.8,939.8,0,932.1,940.9,20,19094],[1792224000,942.8,942.8,0,941.1,945.2,20,17154],[1792238400,946.7,946.7,0,944.3,948.6,20,16871],[1792252800,946.5,946.5,0,945.3,948.8,22,11860],[1792267200,946.4,946.4,0,946.4,947.2,20,12238],[1792281600,945.5,945.5,0,935.7,948.4,19,14748],[1792296000,950.2,950.2,0,942.7,961.4,20,37496],[1792310400,955.4,955.4,0,952.2,960.6,20,37947],[1792324800,958.0,977.6,1,963.4,996.4,20,41086],[1792339200,958.0,958.0,0,953.2,970.6,18,20797],[1792353600,958.5,958.5,0,958.5,958.7,19,21517],[1792368000,958.9,958.9,0,956.5,961.9,18,27566],[1792382400,958.9,971.5,1,960.8,984.6,14,37524]]},"notes":[{"type":"band","from":1789488000,"to":1790697600,"label":"\u7b2c 2 \u6b21\u79fb\u6c11 9/16\u20139/29"},{"type":"vline","t":1791975660,"label":"\u958b\u59cb\u5be6\u6e2c 10/14 19:01"}]}</script>
+<script>window.DD373_BUILT="2026-10-19T15:01:10";window.DD373_PREVIEW=true;</script>
+<script>window.DD373WINDOWS=[{"id":"24h","label":"24 小時","span":86400,"gapReal":1800,"gapEst":43200},{"id":"48h","label":"48 小時","span":172800,"gapReal":1800,"gapEst":43200},{"id":"7d","label":"7 天","span":604800,"gapReal":1800,"gapEst":43200,"agg":"7d","gapAgg":10800},{"id":"30d","label":"30 天","span":2592000,"gapReal":1800,"gapEst":43200,"agg":"30d","gapAgg":43200}];</script>
+<script>
+/* ============================================================================
+   飛馬走勢圖 — 手刻 SVG 渲染器（A 版：含 P0 遺留三修正）
+   原則：
+     1) X 軸＝真實時間線性比例（絕不用資料點索引）
+     2) X 刻度級距從 [1h,3h,6h,12h,1d,2d,7d,14d] 挑「刻度數 5~8」的最小級距，
+        但**標籤不重疊優先**：會重疊就往上跳級（允許掉到 3~4 個刻度），
+        最後還有 DOM 實測保險（真的擠就再隔一個標）。
+     3) 對齊台北時間：整點 tick = floor((t + 8h) / step) × step − 8h；
+        日以上（1d/2d/7d/14d）錨在「台北時間週一 00:00」
+     4) Y 軸 nice ticks：級距 1/2/2.5/5 × 10^n，上下各留 5% padding
+     5) 以 ResizeObserver 依實際像素寬高重繪（不用 viewBox 拉伸）；
+        刻度字 11px、最新值標籤 12px、實測線 2px（固定像素，不隨寬度縮放）
+     6) 面積填色只在實測資料本身範圍（第一筆→最後一筆），不從圖表左緣起畫
+     7) 十字線＋tooltip 用 pointer events（滑鼠／觸控共用同一套）
+     8) 最新值標籤貼在右側 Y 軸上；數字一律四捨五入成整數（與頁面其他處一致）
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var TZOFF = 8 * 3600;                                   // Asia/Taipei（台灣無日光節約，固定 +8）
+  var HOUR = 3600, DAY = 86400;
+  var STEPS = [HOUR, 3 * HOUR, 6 * HOUR, 12 * HOUR, DAY, 2 * DAY, 7 * DAY, 14 * DAY];
+  var FONT = 11, FONT_BADGE = 12, LW = 2, LW_EST = 1.6;
+  var CH_LABEL = 6.2;                                     // 11px 數字估計字寬（第一輪排版的估計值）
+  var MIN_GAP_PAD = 6;                                    // 標籤之間至少留的空白
+
+  /* ---------- 時間（台北） ---------- */
+  function tp(t) {
+    var d = new Date((t + TZOFF) * 1000);
+    return { Y: d.getUTCFullYear(), M: d.getUTCMonth() + 1, D: d.getUTCDate(),
+             h: d.getUTCHours(), m: d.getUTCMinutes() };
+  }
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtDate(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D); }
+  function fmtHM(t) { var p = tp(t); return p2(p.h) + ':' + p2(p.m); }
+  function fmtFull(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
+  function isMidnight(t) { var p = tp(t); return p.h === 0 && p.m === 0; }
+  function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
+  var THIN_STOCK = 20000;
+  var STOCK_BREAK = Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000);   // 台北 2026-10-18 11:07：掛單量改抓「全部頁數」
+  var BAR_ZONE = 0.30;                    // 掛單量柱狀區佔繪圖高度的比例（貼在底部）                   // 掛單量 < 2 億天幣＝薄市場（與 Hero tag 同一門檻；單位萬天幣）
+  function fmtStock(v) {                    // 掛單量：萬天幣 → 「1.65 億」／「8,300 萬」
+    if (v === null || v === undefined) return null;
+    return v >= 10000 ? (v / 10000).toFixed(2) + ' 億' : num(v) + ' 萬';
+  }
+  function isThinStock(v) { return v !== null && v !== undefined && v < THIN_STOCK; }
+  function fmtStockAxis(v) {               // 掛單量右軸刻度：2 億／1.5 億／0
+    if (!(v > 0)) return '0';
+    return v >= 10000 ? (v / 10000).toFixed(v % 10000 === 0 ? 0 : 1) + ' 億' : num(v);
+  }
+  /* 漲跌方向（台股慣例）：數字變大＝紅 ▲、數字變小＝綠 ▼；
+     四捨五入（digits 位）後為 0 就不加箭頭、用灰色。回傳 { cls, arrow, a }，a 已四捨五入。 */
+  function dirOf(v, digits) {
+    var f = Math.pow(10, digits === undefined ? 1 : digits);
+    var a = Math.round(Math.abs(v) * f) / f;
+    if (a === 0 || v === 0) return { cls: 'flat', arrow: '', a: 0 };
+    var up = v > 0;
+    return { cls: up ? 'up' : 'down', arrow: up ? '▲' : '▼', a: a };
+  }
+  function dirPct(v, arrow) {                // 百分比字串（不含正負號）；arrow=false → 不加箭頭（tooltip 括號內）
+    var d = dirOf(v);
+    var useArrow = arrow !== false && d.cls !== 'flat';
+    return { cls: d.cls, txt: useArrow ? d.arrow + ' ' + d.a.toFixed(1) + '%' : d.a.toFixed(1) + '%' };
+  }
+
+  /* ---------- X 刻度 ---------- */
+  // 台北「週一 00:00」的日序（day 0 = 1970-01-01 台北 = 週四 → 週一 ≡ 4 (mod 7)）
+  function mondayAnchorDay(dayIdx) { return dayIdx - ((((dayIdx - 4) % 7) + 7) % 7); }
+
+  function ticksFor(x0, x1, step) {
+    var out = [], i;
+    if (step % DAY === 0) {                                // 日以上：以週一為錨
+      var n = step / DAY;
+      var d0 = Math.floor((x0 + TZOFF) / DAY), d1 = Math.floor((x1 + TZOFF) / DAY);
+      var anchor = mondayAnchorDay(d0);
+      var k = Math.floor((d0 - anchor) / n);
+      for (i = anchor + k * n; i <= d1; i += n) {
+        var t = i * DAY - TZOFF;
+        if (t >= x0 && t <= x1) out.push(t);
+      }
+      return out;
+    }
+    var k0 = Math.ceil((x0 + TZOFF) / step), k1 = Math.floor((x1 + TZOFF) / step);
+    for (i = k0; i <= k1; i++) out.push(i * step - TZOFF);
+    return out;
+  }
+
+  // 標籤文字：整日 → M/D，其餘 → HH:MM（跨日那一格顯示日期）
+  function tickLabel(t, step) {
+    if (step >= DAY) return fmtDate(t);
+    return isMidnight(t) ? fmtDate(t) : fmtHM(t);
+  }
+
+  function maxLabelPx(ticks, step) {
+    var m = 0;
+    for (var i = 0; i < ticks.length; i++) {
+      var w = tickLabel(ticks[i], step).length * CH_LABEL + MIN_GAP_PAD;
+      if (w > m) m = w;
+    }
+    return m || 40;
+  }
+
+  // 相鄰刻度在畫面上的 px 間距（時間等距 → 像素也等距）
+  function tickGapPx(pxInner, step, x0, x1) { return pxInner * step / (x1 - x0); }
+
+  /* 選級距（三段式）：
+     1) 首選：刻度數 5~8 且標籤不重疊 → 取最小級距
+     2) 次選：沒有 5~8 時，取「刻度數最接近 5」且不重疊、且 >=3 個刻度的級距
+        （例如 30 天窗：2d 會擠出 16 個刻度、7d 剛好 4 個 → 取 7d 週刻度）
+     3) 都不行 → 用最大級距，由 labelEvery／DOM 實測隔一個標收拾 */
+  function chooseStep(x0, x1, pxInner) {
+    var i, tk, gap, need, n, best = null, fallback = null, bestDist = Infinity;
+    for (i = 0; i < STEPS.length; i++) {
+      tk = ticksFor(x0, x1, STEPS[i]);
+      n = tk.length;
+      if (n < 3) continue;
+      gap = tickGapPx(pxInner, STEPS[i], x0, x1);
+      need = maxLabelPx(tk, STEPS[i]);
+      if (gap < need) continue;                                  // 會重疊 → 不採用
+      if (n >= 5 && n <= 8 && best === null) best = STEPS[i];     // 首選
+      if (fallback === null && n < 5) fallback = STEPS[i];        // 次選：第一個 <5 但不重疊的
+      if (n < 5 && Math.abs(n - 5) < bestDist) { bestDist = Math.abs(n - 5); fallback = STEPS[i]; }
+    }
+    if (best !== null) return best;
+    if (fallback !== null) return fallback;
+    return STEPS[STEPS.length - 1];
+  }
+
+  // 完整排版計劃：級距、所有刻度、以及實際要標的刻度（隔 labelEvery 個標一次）
+  function labelPlan(x0, x1, pxInner) {
+    var step = chooseStep(x0, x1, pxInner);
+    var ticks = ticksFor(x0, x1, step);
+    var need = maxLabelPx(ticks, step);
+    var gap = tickGapPx(pxInner, step, x0, x1);
+    var every = gap > 0 ? Math.max(1, Math.ceil(need / gap)) : 1;
+    var labeled = [];
+    for (var i = 0; i < ticks.length; i++) if (i % every === 0) labeled.push(ticks[i]);
+    return { step: step, ticks: ticks, labeled: labeled, every: every };
+  }
+
+  /* ---------- Y 軸 nice ticks（級距 1/2/2.5/5 × 10^n） ---------- */
+  function niceStep(raw) {
+    if (!(raw > 0)) return 1;
+    var exp = Math.floor(Math.log(raw) / Math.LN10);
+    var f = raw / Math.pow(10, exp);
+    var nf = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+    return nf * Math.pow(10, exp);
+  }
+  function niceScale(lo, hi, target, padFrac) {
+    if (padFrac === undefined) padFrac = 0.05;
+    if (target === undefined) target = 5;
+    if (!(hi > lo)) { var c = (hi + lo) / 2 || 0; lo = c - 1; hi = c + 1; }
+    var pad = (hi - lo) * padFrac;
+    lo -= pad; hi += pad;
+    var step = niceStep((hi - lo) / (target - 1));
+    var nlo = Math.floor(lo / step) * step, nhi = Math.ceil(hi / step) * step;
+    var ticks = [], v;
+    for (v = nlo; v <= nhi + step * 1e-9; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+    return { min: nlo, max: nhi, step: step, ticks: ticks };
+  }
+
+  /* ---------- 資料輔助 ---------- */
+  function segments(pts, gap) {                            // 相鄰兩筆間隔 > gap 就斷線
+    var segs = [], cur = [], i;
+    for (i = 0; i < pts.length; i++) {
+      if (cur.length && pts[i].t - cur[cur.length - 1].t > gap) { segs.push(cur); cur = []; }
+      cur.push(pts[i]);
+    }
+    if (cur.length) segs.push(cur);
+    return segs;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---------- 幾何 ---------- */
+  function pad(w) { return w >= 560 ? { l: 48, r: 50, t: 12, b: 28 } : { l: 46, r: 46, t: 12, b: 28 }; }
+  function height(w) { return w >= 560 ? 240 : 200; }
+  function bounds(vals) {
+    var lo = Infinity, hi = -Infinity;
+    for (var i = 0; i < vals.length; i++) {
+      var v = vals[i];
+      if (v === null || v === undefined || isNaN(v)) continue;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    return lo === Infinity ? [0, 1] : [lo, hi];
+  }
+
+  /* ---------- 主渲染 ---------- */
+  function render(win, depth) {
+    var host = document.querySelector('.chart[data-win="' + win.id + '"]');
+    if (!host) return;
+    var w = Math.max(240, Math.round(host.clientWidth || 320));
+    var h = height(w), pd = pad(w);
+    var iw = w - pd.l - pd.r, ih = h - pd.t - pd.b;
+
+    var now = Math.floor(Date.now() / 1000);
+    var x1 = now, x0 = now - win.span;
+
+    // 這個窗要用原始點還是降採樣序列？（7 天＝1 小時中位數＋min–max 帶；30 天＝4 小時）
+    var useAgg = !!(win.agg && DATA.agg && DATA.agg[win.agg]);
+    var real, gapReal;
+    if (useAgg) {
+      real = DATA.agg[win.agg].filter(function (r) { return r[0] >= x0 && r[0] <= now; })
+                              .map(function (r) { return { t: r[0], v: r[1], raw: r[2], o: !!r[3],
+                                                           lo: r[4], hi: r[5], n: r[6], s: r[7] === undefined ? null : r[7] }; });
+      gapReal = win.gapAgg || win.gapReal;              // 聚合後：連續幾個時段沒資料才斷線
+    } else {
+      real = DATA.real.filter(function (p) { return p.t >= x0 && p.t <= now; })
+                       .map(function (p) { return { t: p.t, v: p.v, raw: p.raw, o: p.o, s: p.s }; });
+      gapReal = win.gapReal;
+    }
+    var est = DATA.est.filter(function (p) { return p.t >= x0 && p.t <= now; })
+                      .map(function (p) { return { t: p.t, v: p.v, s: p.s }; });
+
+    if (real.length < 2 && est.length < 2) {
+      host.innerHTML = '<p class="muted" style="font-size:12px;margin:6px 0">這個時間窗還沒有資料</p>';
+      return;
+    }
+
+    // Y 範圍：實測（含離群原始值、min–max 帶）＋估算
+    var vals = real.map(function (p) { return p.v; }).concat(real.map(function (p) { return p.raw; }))
+                   .concat(real.map(function (p) { return p.lo === undefined ? p.v : p.lo; }))
+                   .concat(real.map(function (p) { return p.hi === undefined ? p.v : p.hi; }))
+                   .concat(est.map(function (p) { return p.v; }));
+    var yb = bounds(vals), ys = niceScale(yb[0], yb[1], 5, 0.05);
+    var y0 = ys.min, y1 = ys.max;
+
+    function X(t) { return pd.l + (t - x0) / (x1 - x0) * iw; }
+    function Y(v) { return pd.t + (y1 - v) / (y1 - y0) * ih; }
+
+    var plan = labelPlan(x0, x1, iw);
+    if (win.__everyW === w && win.__labelEvery && win.__labelEvery > plan.every) {   // DOM 實測後的修正值
+      plan.every = win.__labelEvery;
+      plan.labeled = plan.ticks.filter(function (_t, i) { return i % plan.every === 0; });
+    }
+    var step = plan.step;
+
+    // ---- 掛單量柱：市場總掛單（萬天幣）。只畫實測點；估算段沒有逐筆掛單量可比 ----
+    var stockPts = real.filter(function (p) { return p.s !== null && p.s !== undefined && p.s > 0; });
+    var sTop = 0;
+    stockPts.forEach(function (p) { if (p.s > sTop) sTop = p.s; });
+    // 上限取整到 0.5 億；只在 0 與上限標刻度（中間由 2 億薄市場虛線當參考），避免小圖擠一排字
+    if (sTop > 0) sTop = Math.ceil(sTop / 5000) * 5000;
+    var sTicks = sTop > 0 ? [0, sTop] : [];
+    var barTop = pd.t + ih * (1 - BAR_ZONE), barBase = pd.t + ih;
+    function SY(v) { return barBase - (v / sTop) * (barBase - barTop); }
+    var dts = [];
+    for (var di = 1; di < real.length; di++) dts.push(real[di].t - real[di - 1].t);
+    dts.sort(function (a, b) { return a - b; });
+    var medDt = dts.length ? dts[Math.floor(dts.length / 2)] : 3600;
+    var bw = Math.max(1.2, Math.min(9, iw * medDt / (x1 - x0) * 0.62));
+    // 價格徽章的位置（右軸掛單量刻度要避開它，兩種刻度才不會疊在一起）
+    var latestPt = null;
+    for (var li2 = DATA.real.length - 1; li2 >= 0; li2--) {
+      if (DATA.real[li2].t <= now && DATA.real[li2].t >= x0) { latestPt = DATA.real[li2]; break; }
+    }
+    var badgeY = latestPt ? Y(latestPt.v) : null;
+
+    var s = [];
+    s.push('<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" ' +
+           'font-family="-apple-system,PingFang TC,Microsoft JhengHei,sans-serif" role="img" ' +
+           'aria-label="' + esc(win.label + ' 走勢') + '">');
+
+    // 面積填色漸層（由線往下淡出到透明；顏色/透明度由 CSS 的 .stop-top/.stop-bot 決定）
+    s.push('<defs><linearGradient id="g_' + win.id + '" gradientUnits="userSpaceOnUse" ' +
+           'x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '">' +
+           '<stop class="stop-top" offset="0%"/><stop class="stop-bot" offset="100%"/></linearGradient></defs>');
+
+    // 圖上註記：背景色帶（例：第 2 次移民期）先畫，格線與資料線疊在上面
+    (DATA.notes || []).forEach(function (nt) {
+      if (nt.type !== 'band' || nt.to <= x0 || nt.from >= x1) return;
+      var bx0 = X(Math.max(nt.from, x0)), bx1 = X(Math.min(nt.to, x1));
+      s.push('<rect class="note-band" x="' + bx0.toFixed(1) + '" y="' + pd.t +
+             '" width="' + Math.max(bx1 - bx0, 1).toFixed(1) + '" height="' + ih + '"/>');
+      if (bx1 - bx0 > 60) {
+        s.push('<text class="note-txt" x="' + (bx0 + 4).toFixed(1) + '" y="' + (pd.t + 11) +
+               '" text-anchor="start">' + nt.label + '</text>');
+      }
+    });
+
+    // 格線＋Y 標籤
+    ys.ticks.forEach(function (v) {
+      var yy = Y(v);
+      s.push('<line class="grid" x1="' + pd.l + '" y1="' + yy.toFixed(1) + '" x2="' + (pd.l + iw) + '" y2="' + yy.toFixed(1) + '"/>');
+      s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) +
+             '" text-anchor="end">' + num(v) + '</text>');
+    });
+
+    // 掛單量柱：貼在圖底；深淺色／線寬都交給 CSS
+    // 10/18 11:07 前只抓第 1 頁（數字被低估約一半）→ 用灰色柱，避免被讀成「賣壓翻倍」
+    if (stockPts.length) {
+      stockPts.forEach(function (p) {
+        var by = SY(p.s);
+        s.push('<rect class="bar' + (p.t < STOCK_BREAK ? ' bar-old' : '') + '" x="' + (X(p.t) - bw / 2).toFixed(1) +
+               '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, barBase - by).toFixed(1) + '"/>');
+      });
+      if (sTop >= THIN_STOCK) {                                  // 薄市場門檻 2 億（與 Hero tag 同一門檻）
+        var ty = SY(THIN_STOCK);
+        s.push('<line class="thin-stock" x1="' + pd.l + '" y1="' + ty.toFixed(1) +
+               '" x2="' + (pd.l + iw) + '" y2="' + ty.toFixed(1) + '"/>');
+        s.push('<text class="stock-tick" x="' + (pd.l + 3) + '" y="' + (ty - 3).toFixed(1) +
+               '" text-anchor="start">2 億</text>');
+      }
+      s.push('<line class="stock-grid" x1="' + pd.l + '" y1="' + barTop.toFixed(1) +
+             '" x2="' + (pd.l + iw) + '" y2="' + barTop.toFixed(1) + '"/>');   // 柱區頂端＝右軸上限，給刻度一個依據
+      sTicks.forEach(function (v) {                              // 右軸刻度（跟價格徽章重疊的那格不標）
+        var yy = SY(v);
+        if (badgeY !== null && Math.abs(yy - badgeY) < 12) return;
+        s.push('<text class="stock-axis" x="' + (pd.l + iw + 6) + '" y="' + (yy + 3.2).toFixed(1) +
+               '" text-anchor="start">' + fmtStockAxis(v) + '</text>');
+      });
+    }
+
+    // 圖上註記：垂直虛線標記（例：開始實測）
+    (DATA.notes || []).forEach(function (nt) {
+      if (nt.type !== 'vline' || nt.t < x0 || nt.t > x1) return;
+      var vx = X(nt.t), near = vx > pd.l + iw - 60;
+      s.push('<line class="note-line" x1="' + vx.toFixed(1) + '" y1="' + pd.t +
+             '" x2="' + vx.toFixed(1) + '" y2="' + (pd.t + ih) + '"/>');
+      s.push('<text class="note-txt" x="' + (near ? vx - 4 : vx + 4).toFixed(1) + '" y="' + (pd.t + 23) +
+             '" text-anchor="' + (near ? 'end' : 'start') + '">' + nt.label + '</text>');
+    });
+
+    // min–max 淡色帶（只有降採樣的窗有）
+    if (useAgg && real.length >= 2) {
+      segments(real, gapReal).forEach(function (seg) {
+        if (seg.length < 2) return;
+        var up = seg.map(function (p, i) {
+          return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.hi).toFixed(1);
+        }).join(' ');
+        var dn = seg.slice().reverse().map(function (p) {
+          return 'L' + X(p.t).toFixed(1) + ',' + Y(p.lo).toFixed(1);
+        }).join(' ');
+        s.push('<path class="band" d="' + up + ' ' + dn + ' Z"/>');
+      });
+    }
+
+    // 面積填色：只涵蓋實測資料本身（第一筆→最後一筆），不從左緣起畫
+    if (real.length >= 2) {
+      segments(real, gapReal).forEach(function (seg) {
+        if (seg.length < 2) return;
+        var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
+        d += ' L' + X(seg[seg.length - 1].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) +
+             ' L' + X(seg[0].t).toFixed(1) + ',' + (pd.t + ih).toFixed(1) + ' Z';
+        s.push('<path class="area" d="' + d + '" fill="url(#g_' + win.id + ')" stroke="none"/>');
+      });
+    }
+
+    // 估算線（灰虛線，無填色）
+    segments(est, win.gapEst).forEach(function (seg) {
+      if (seg.length < 2) return;
+      var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
+      s.push('<path class="line-est" d="' + d + '"/>');
+    });
+
+    // 實測線
+    segments(real, gapReal).forEach(function (seg) {
+      var d = seg.map(function (p, i) { return (i ? 'L' : 'M') + X(p.t).toFixed(1) + ',' + Y(p.v).toFixed(1); }).join(' ');
+      s.push('<path class="line-real" d="' + d + '"/>');
+    });
+
+    // 離群點：空心小點（原始值位置）
+    real.forEach(function (p) {
+      if (!p.o) return;
+      s.push('<circle class="outlier" cx="' + X(p.t).toFixed(1) + '" cy="' + Y(p.raw).toFixed(1) + '" r="3.4"/>');
+    });
+
+    // X 標籤（台北整點／週一對齊）
+    // 對齊方式：一律置中（貼齊刻度）；只有置中文字會超出 SVG 邊界時才靠左／靠右。
+    // 註：不要「首尾一律靠邊」——第一個標籤整段往右伸會跟下一個標籤重疊。
+    plan.labeled.forEach(function (t) {
+      var txt = tickLabel(t, step), est = txt.length * CH_LABEL, cx = X(t);
+      var anchor = 'middle';
+      if (cx - est / 2 < 2) anchor = 'start';
+      else if (cx + est / 2 > w - 2) anchor = 'end';
+      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) +
+             '" text-anchor="' + anchor + '">' + txt + '</text>');
+    });
+
+    // 最新值標籤：貼在右側 Y 軸上（一律用最新的「原始實測點」，四個窗才會跟 Hero 一致）
+    var latest = null, li;
+    for (li = DATA.real.length - 1; li >= 0; li--) {
+      if (DATA.real[li].t <= now && DATA.real[li].t >= x0) { latest = DATA.real[li]; break; }
+    }
+    if (!latest && real.length) latest = real[real.length - 1];
+    if (latest) {
+      var ly = Y(latest.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
+      ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
+      s.push('<rect class="badge" x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw +
+             '" height="' + bh + '" rx="6"/>');
+      s.push('<text class="badge-t" x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) +
+             '" text-anchor="middle">' + num(latest.v) + '</text>');
+    }
+
+    // 十字線圖層（hover 時只更新這一層，不重繪整張圖）
+    s.push('<g class="cross-g" visibility="hidden">' +
+           '<line class="cross" x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '"/>' +
+           '<circle class="cross-dot" cx="0" cy="0" r="4"/></g>');
+
+    s.push('</svg>');
+    host.innerHTML = s.join('');
+
+    // hover 用的合併序列（實測＋估算，依時間排序；估算本來就在實測之前）
+    var hoverPts = est.map(function (p) { return { t: p.t, v: p.v, raw: p.v, o: false, src: 'est', s: p.s }; })
+                      .concat(real.map(function (p) {
+                        return { t: p.t, v: p.v, raw: p.raw, o: p.o, src: 'real', s: p.s,
+                                 lo: p.lo, hi: p.hi, n: p.n };
+                      }))
+                      .sort(function (a, b) { return a.t - b.t; });
+
+    CHARTS[win.id] = { win: win, host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih,
+                       x0: x0, x1: x1, y0: y0, y1: y1, X: X, Y: Y, real: real, est: est,
+                       hoverPts: hoverPts, step: step, plan: plan, useAgg: useAgg,
+                       aggLabel: useAgg ? (win.agg === '7d' ? '1 小時' : '4 小時') : null };
+
+    updateSummary(win, CHARTS[win.id]);
+
+    // 標籤量測保險：實際文字框若還重疊 → 隔一個標重畫（最多 3 輪）
+    if (fitLabels(win, CHARTS[win.id], depth || 0)) return;
+    attachHover(win, CHARTS[win.id]);
+    if (window.DD373AfterRender) window.DD373AfterRender(win, CHARTS[win.id]);
+  }
+
+  /* ---------- 本時窗摘要（圖上方一行） ---------- */
+  function updateSummary(win, st) {
+    var el = document.querySelector('.wsum[data-win="' + win.id + '"]');
+    if (!el) return;
+    var pts = st.hoverPts;
+    if (pts.length < 2) { el.innerHTML = ''; return; }
+    var first = pts[0], last = pts[pts.length - 1];
+    var vals = pts.map(function (p) { return p.v; });
+    var hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals);
+    var chg = (last.v / first.v - 1) * 100;
+    // 台股慣例：數字變大＝紅 ▲、變小＝綠 ▼、0.0% 灰不加箭頭（與 Hero 膠囊同一套寫法）
+    var d = dirPct(chg);
+    var hasEst = pts.some(function (p) { return p.src === 'est'; });
+    el.innerHTML = '本時窗 <span class="' + d.cls + '">' + d.txt + '</span>' +
+                   '　高 <b>' + num(hi) + '</b>　低 <b>' + num(lo) + '</b>' +
+                   (hasEst ? '　<span class="tag">含估算</span>' : '');
+  }
+
+  /* ---------- 十字線＋tooltip（pointer events：滑鼠／觸控共用） ---------- */
+  function attachHover(win, st) {
+    var host = st.host;
+    // 注意：render() 會用 innerHTML 重畫整張圖，tooltip 元素會被清掉 → 每次都要確認它還掛在 DOM 上
+    if (!host.__tt) {
+      host.__tt = document.createElement('div');
+      host.__tt.className = 'tt';
+    }
+    if (host.__tt.parentNode !== host) host.appendChild(host.__tt);
+    if (!host.__bound) {
+      host.__bound = true;
+      host.addEventListener('pointerdown', function (e) {
+        host.__pressed = true;
+        hoverAt(win, e);
+      });
+      host.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'mouse' || host.__pressed) hoverAt(win, e);
+      });
+      host.addEventListener('pointerup', function () { host.__pressed = false; });   // 觸控：放開後保留
+      host.addEventListener('pointerleave', function (e) {
+        if (e.pointerType === 'mouse') hideHover(win);
+      });
+      document.addEventListener('pointerdown', function (e) {                        // 點別處才收起來
+        if (!host.contains(e.target)) hideHover(win);
+      }, true);
+    }
+  }
+
+  function hideHover(win) {
+    var st = CHARTS[win.id];
+    if (!st) return;
+    var g = st.host.querySelector('g.cross-g');
+    if (g) g.setAttribute('visibility', 'hidden');
+    if (st.host.__tt) st.host.__tt.classList.remove('on');
+  }
+
+  function hoverAt(win, ev) {
+    var st = CHARTS[win.id];
+    if (!st || !st.hoverPts.length) return;
+    var host = st.host, tt = host.__tt;
+    var rect = host.getBoundingClientRect();
+    var px = ev.clientX - rect.left, py = ev.clientY - rect.top;
+
+    // 找最近的點；若附近 4px 內有離群點則優先吸附到它（空心圈半徑 3.4px，手指點得到，
+    // 這樣「10/15 的 863 原始值」在手機上也查得到 —— 否則要精準命中 0.1px 內才看得到）
+    var best = null, bestD = Infinity, outBest = null, outD = Infinity, i, d;
+    for (i = 0; i < st.hoverPts.length; i++) {
+      d = Math.abs(st.X(st.hoverPts[i].t) - px);
+      if (d < bestD) { bestD = d; best = i; }
+      if (st.hoverPts[i].o && d < outD) { outD = d; outBest = i; }
+    }
+    if (outBest !== null && outD <= 4) best = outBest;
+    if (!best && best !== 0) return;
+    var p = st.hoverPts[best], prev = best > 0 ? st.hoverPts[best - 1] : null;
+
+    var g = host.querySelector('g.cross-g');
+    var cx = st.X(p.t), cy = st.Y(p.v);
+    if (g) {
+      g.setAttribute('visibility', 'visible');
+      var ln = g.querySelector('line.cross');
+      ln.setAttribute('x1', cx.toFixed(1)); ln.setAttribute('x2', cx.toFixed(1));
+      var dot = g.querySelector('circle.cross-dot');
+      dot.setAttribute('cx', cx.toFixed(1)); dot.setAttribute('cy', cy.toFixed(1));
+    }
+
+    // 顯示的數值：離群點顯示原始值（主線畫的是平滑後的中位數）
+    var shown = p.o ? p.raw : p.v;
+    var prevV = prev ? (prev.o ? prev.raw : prev.v) : null;
+    var diff = prev ? shown - prevV : null;
+    var pct = prevV ? diff / prevV * 100 : null;
+    var difftxt;
+    if (diff === null) {
+      difftxt = '';
+    } else {
+      // 台股慣例：▲ 紅／▼ 綠、四捨五入為 0 就不加箭頭；只上色不寫正負號；括號內的百分比不重複箭頭
+      var dd = dirOf(diff, 0), dp = (pct === null || prevV === null) ? null : dirPct(pct, false);
+      var dtxt = dd.cls === 'flat' ? '0' : dd.arrow + ' ' + num(dd.a);
+      difftxt = '較前一筆 <span class="' + dd.cls + '">' + dtxt + '</span>' +
+                (dp ? '（<span class="' + dp.cls + '">' + dp.txt + '</span>）' : '');
+    }
+    // 掛單量（市場總掛單）：該時點最近一次掃描的 stock_wj；估算段是舊全服掃描（約 5 小時一筆）
+    var stxt = fmtStock(p.s);
+    var stockHtml = stxt ? '<div class="stk">掛單 ' + stxt +
+                           (isThinStock(p.s) ? ' <span class="tag">薄市場</span>' : '') + '</div>' : '';
+    tt.innerHTML =
+      '<div class="t1">' + fmtFull(p.t) + '</div>' +
+      '<div class="v">' + num(shown) + ' 天幣/元</div>' +
+      stockHtml +
+      (difftxt ? '<div>' + difftxt + '</div>' : '') +
+      '<div class="src">來源：' + (p.src === 'real' ? '實測' : '估算') +
+      (p.n ? '（' + (st.aggLabel || '') + '中位數・' + p.n + ' 筆；區間 ' + num(p.lo) + '–' + num(p.hi) + '）'
+           : (p.o ? '（離群點・原始值；主線為中位數 ' + num(p.v) + '）' : '')) + '</div>';
+    tt.classList.add('on');
+
+    var tw = tt.offsetWidth, th = tt.offsetHeight;
+    var left = cx + 12;
+    if (left + tw > st.w - 4) left = cx - tw - 12;
+    if (left < 4) left = 4;
+    var top = Math.min(Math.max(py - th - 10, 4), st.h - th - 4);
+    tt.style.left = left.toFixed(1) + 'px';
+    tt.style.top = top.toFixed(1) + 'px';
+  }
+
+  function fitLabels(win, st, depth) {
+    var labels = st.host.querySelectorAll('text.xtick');
+    if (labels.length < 3 || !st.host.clientWidth) return false;      // 面板隱藏時量不到，切換頁籤時再量
+    var rects = [], i;
+    for (i = 0; i < labels.length; i++) rects.push(labels[i].getBoundingClientRect());
+    for (i = 1; i < rects.length; i++) {
+      if (rects[i].left < rects[i - 1].right + 2) {                   // 有重疊
+        if (depth >= 3) return false;
+        win.__labelEvery = (st.plan.every || 1) * 2;
+        win.__everyW = st.w;
+        render(win, depth + 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /* ---------- 載入 / 重繪 ---------- */
+  var DATA = null, CHARTS = {};
+  function renderAll() { WINCFG.forEach(function (win) { render(win, 0); }); }
+
+  function normalize(d) {                                 // 內嵌資料用精簡陣列
+    d.real = d.real.map(function (r) { return { t: r[0], v: r[1], raw: r[2] === undefined ? r[1] : r[2], o: !!r[3],
+                                                s: r[4] === undefined ? null : r[4] }; });
+    d.est = d.est.map(function (r) { return { t: r[0], v: r[1], s: r[2] === undefined ? null : r[2] }; });
+    return d;
+  }
+
+  // 圖例多一行「掛單量」：這裡補（不進 builder），改版驗收通過再併回正式版
+  function addLegend() {
+    var lgd = document.querySelector('.lgd');
+    if (!lgd || lgd.querySelector('.lg-bar')) return;
+    var sp = document.createElement('span');
+    sp.className = 'li';
+    sp.setAttribute('data-tip', '下方橘色柱＝當下市場總掛單量（億天幣）。10/18 11:07 以前只抓第 1 頁、數字被低估，所以畫成灰色；掉到 2 億以下＝薄市場。');
+    sp.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true">' +
+                   '<rect class="lg-bar" x="1" y="4" width="8" height="7" rx="1"/>' +
+                   '<rect class="lg-bar-old" x="11" y="4" width="8" height="7" rx="1"/></svg>掛單量';
+    lgd.appendChild(sp);
+  }
+
+  function boot() {
+    var el = document.getElementById('chart-data');
+    if (!el) return;
+    DATA = normalize(JSON.parse(el.textContent));
+    addLegend();
+    renderAll();
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(function () {
+        var seen = {};
+        WINCFG.forEach(function (win) {
+          var host = document.querySelector('.chart[data-win="' + win.id + '"]');
+          if (host && host.clientWidth) seen[win.id] = Math.round(host.clientWidth);
+        });
+        var changed = Object.keys(seen).some(function (k) { return CHARTS[k] && CHARTS[k].cw !== seen[k]; });
+        if (changed) renderAll();
+      });
+      WINCFG.forEach(function (win) {
+        var host = document.querySelector('.chart[data-win="' + win.id + '"]');
+        if (host) ro.observe(host);
+      });
+    } else {
+      window.addEventListener('resize', renderAll);
+    }
+    // 保險 1：視窗尺寸變化也重繪（ResizeObserver 在部分環境不一定會通知）
+    window.addEventListener('resize', function () { setTimeout(renderAll, 0); });
+    // 保險 2：切換時間窗時面板由 display:none 變可見 → 立即用正確寬度重繪
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=tr]'), function (r) {
+      r.addEventListener('change', function () { setTimeout(renderAll, 0); });
+    });
+    // 系統深／淺色切換 → 重繪（顏色雖然都走 CSS 變數，重繪可確保 tooltip 量測與尺寸一致）
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onScheme = function () { setTimeout(renderAll, 0); };
+      if (mq.addEventListener) mq.addEventListener('change', onScheme);
+      else if (mq.addListener) mq.addListener(onScheme);
+    }
+  }
+
+  window.DD373TREND = { boot: boot, renderAll: renderAll, render: render, charts: CHARTS,
+                        // 供測試用
+                        ticksFor: ticksFor, chooseStep: chooseStep, labelPlan: labelPlan,
+                        maxLabelPx: maxLabelPx, tickGapPx: tickGapPx, mondayAnchorDay: mondayAnchorDay,
+                        niceScale: niceScale, niceStep: niceStep, tickLabel: tickLabel,
+                        fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS,
+                        dirOf: dirOf, dirPct: dirPct,
+                        fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK,
+                        fmtStockAxis: fmtStockAxis, STOCK_BREAK: STOCK_BREAK, BAR_ZONE: BAR_ZONE };
+
+  var WINCFG = window.DD373WINDOWS || [];
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script><script>
+/* ============================================================================
+   天幣幣值頁 — 行為層（D 階段）
+     1) 時間會動：所有 [data-ts] 每 60 秒重算「N 分鐘前」；膠囊依新鮮度轉 --warn／--bad，
+        超過 60 分鐘另外在頁首顯示「資料已停更」橫幅
+     2) 分頁可見時每 5 分鐘檢查 version.json：有新資料才整頁重新載入
+        三個保護：① built 真的變新 ② 最近 60 秒有操作就不打斷 ③ tooltip 開著就不打斷
+     3) 記住上次選的時間窗（localStorage）；details 展開狀態與捲動位置（sessionStorage）
+     4) 預覽版專用測試參數（正式版沒有 window.DD373_PREVIEW，一律忽略）
+          ?now=2026-10-17T04:00   假裝現在時間（驗「資料延遲」膠囊與「停更」橫幅）
+          ?poll=15                把 5 分鐘檢查改成 15 秒
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  var PREVIEW = !!window.DD373_PREVIEW;
+  var Q = {};
+  try { Q = new URLSearchParams(location.search); } catch (e) { }
+  function qget(k) { try { return Q.get(k); } catch (e) { return null; } }
+
+  // ---------- 現在時間（預覽可用 ?now= 假造） ----------
+  function previewNowMs() {
+    if (!PREVIEW) return null;
+    var v = qget('now');
+    if (!v) return null;
+    var ms = Date.parse(v.length <= 16 ? v + '+08:00' : v);       // 沒帶時區就當台北時間
+    return isNaN(ms) ? null : ms;
+  }
+  var FAKE_NOW = previewNowMs();
+  function nowMs() { return FAKE_NOW || Date.now(); }
+  function pollMs() {
+    var s = PREVIEW ? parseInt(qget('poll') || '0', 10) : 0;
+    return s > 0 ? s * 1000 : 5 * 60 * 1000;
+  }
+
+  /* ---------- 1) 相對時間／新鮮度 ---------- */
+  function p2(n) { return (n < 10 ? '0' : '') + n; }
+  function tp(ms) {
+    var d = new Date(ms + 8 * 3600 * 1000);                       // 台北時間
+    return { M: d.getUTCMonth() + 1, D: d.getUTCDate(), h: d.getUTCHours(), m: d.getUTCMinutes() };
+  }
+  function fmtAbs(tsSec) { var p = tp(tsSec * 1000); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
+  function ageMin(tsSec) { return Math.floor((nowMs() - tsSec * 1000) / 60000); }
+  function relText(min) {
+    if (min < 1) return '剛剛';
+    if (min < 60) return min + ' 分鐘前';
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '') + '前';
+  }
+  function durText(min) {                                          // 經過時間（不帶「前」）
+    if (min < 1) return '不到 1 分鐘';
+    if (min < 60) return min + ' 分鐘';
+    var h = Math.floor(min / 60), m = min % 60;
+    return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '');
+  }
+  function freshState(min) {                                       // 資料新鮮度：ok／warn／bad
+    if (min <= 30) return { cls: '', txt: relText(min) };
+    if (min <= 60) return { cls: 'warn', txt: '資料延遲' };
+    return { cls: 'bad', txt: '已停更 ' + durText(min) };
+  }
+
+  function updateTimes() {
+    var nodes = document.querySelectorAll('[data-ts][data-rel="1"]'), i, el, min;
+    for (i = 0; i < nodes.length; i++) {
+      el = nodes[i];
+      el.textContent = relText(ageMin(parseInt(el.getAttribute('data-ts'), 10)));
+    }
+    var cap = document.querySelector('[data-fresh]');
+    if (!cap) return;
+    var src = cap.querySelector('[data-ts]');
+    if (!src) return;
+    var ts = parseInt(src.getAttribute('data-ts'), 10);
+    min = ageMin(ts);
+    var st = freshState(min);
+    cap.className = 'capsule' + (st.cls ? ' ' + st.cls : '');
+    src.textContent = st.txt;
+    var ban = document.getElementById('stale-banner');
+    if (ban) {
+      if (st.cls === 'bad') {
+        ban.textContent = '已停更 ' + durText(min) + '（最後一筆 ' + fmtAbs(ts) + '）';
+        ban.hidden = false;
+      } else {
+        ban.hidden = true;
+      }
+    }
+  }
+
+  /* ---------- 2) 自動更新（有新資料才 reload，且不打斷使用者） ---------- */
+  var MY_BUILT = (function () {
+    var b = window.DD373_BUILT;
+    if (!b) return 0;
+    var ms = Date.parse(b.length <= 16 ? b + '+08:00' : b);
+    return isNaN(ms) ? 0 : ms;
+  })();
+  var lastInteract = Date.now();
+  ['pointerdown', 'pointermove', 'pointerup', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(function (ev) {
+    document.addEventListener(ev, function () { lastInteract = Date.now(); }, { passive: true });
+  });
+  function tooltipOpen() { return !!document.querySelector('.tt.on'); }
+  function shouldReload(newBuiltMs, now, lastInt, ttOpen) {
+    if (!newBuiltMs || !MY_BUILT) return false;
+    if (newBuiltMs <= MY_BUILT) return false;        // 沒有新資料 → 不 reload
+    if (ttOpen) return false;                        // tooltip 開著 → 不打斷
+    if (now - lastInt < 60000) return false;         // 最近 60 秒有操作 → 延到下一輪
+    return true;
+  }
+  function checkVersion() {
+    return fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.built) return false;
+        var nb = Date.parse(j.built.length <= 16 ? j.built + '+08:00' : j.built);
+        if (shouldReload(nb, Date.now(), lastInteract, tooltipOpen())) { location.reload(); return true; }
+        return false;
+      })
+      .catch(function () { return false; });
+  }
+
+  /* ---------- 3) 狀態記住／還原 ---------- */
+  var K_TAB = 'dd373.tab', K_DET = 'dd373.details', K_SCR = 'dd373.scroll';
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) { } }
+
+  function winOfTabId(id) { return id.replace(/^tr/, '') + (id === 'tr7' || id === 'tr30' ? 'd' : 'h'); }
+  function restoreTab() {
+    var v = lsGet(K_TAB) || '24h';                                 // 讀不到就用 24 小時
+    var el = document.getElementById('tr' + v.replace(/[hd]$/, ''));
+    if (!el) el = document.getElementById('tr24');
+    if (el) el.checked = true;
+  }
+  function bindTab() {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=tr]'), function (r) {
+      r.addEventListener('change', function () { if (r.checked) lsSet(K_TAB, winOfTabId(r.id)); });
+    });
+  }
+  function bindDetails() {
+    var ds = document.querySelectorAll('details.dsc');
+    var saved = ssGet(K_DET);
+    if (saved) {
+      try {
+        var arr = JSON.parse(saved) || [];
+        Array.prototype.forEach.call(ds, function (d, i) { if (arr[i]) d.open = true; });
+      } catch (e) { }
+    }
+    Array.prototype.forEach.call(ds, function (d) {
+      d.addEventListener('toggle', function () {
+        var cur = [];
+        Array.prototype.forEach.call(ds, function (x) { cur.push(x.open ? 1 : 0); });
+        ssSet(K_DET, JSON.stringify(cur));
+      });
+    });
+  }
+  function bindScroll() {
+    var t = null;
+    window.addEventListener('scroll', function () {
+      if (t) return;
+      t = setTimeout(function () {
+        ssSet(K_SCR, String(Math.round(window.scrollY || 0)));
+        t = null;
+      }, 250);
+    }, { passive: true });
+  }
+  function restoreScroll() {
+    var v = ssGet(K_SCR);
+    if (v === null) return;
+    var y = parseInt(v, 10);
+    if (!isNaN(y) && y > 0) setTimeout(function () { window.scrollTo(0, y); }, 0);
+  }
+
+  /* ---------- 圖例說明泡泡（滑鼠 hover／手機點一下） ---------- */
+  function bindTips() {
+    var tip = null, cur = null, shownAt = 0;
+    function hide() {
+      if (tip && tip.parentNode) tip.parentNode.removeChild(tip);
+      tip = null; cur = null;
+    }
+    function show(el) {
+      if (cur === el) return;
+      hide();
+      cur = el;
+      tip = document.createElement('div');
+      tip.className = 'lgtip';
+      tip.textContent = el.getAttribute('data-tip');
+      document.body.appendChild(tip);
+      var r = el.getBoundingClientRect(), w = tip.offsetWidth;
+      tip.style.left = Math.max(8, Math.min(r.left, document.documentElement.clientWidth - w - 8)) + 'px';
+      tip.style.top = (r.bottom + (window.scrollY || 0) + 8) + 'px';
+      shownAt = Date.now();
+    }
+    function target(e) {
+      return (e.target && e.target.closest) ? e.target.closest('[data-tip]') : null;
+    }
+    document.addEventListener('mouseover', function (e) {          // 滑鼠：移上去顯示、移開收起
+      var el = target(e);
+      if (el) show(el); else hide();
+    }, true);
+    document.addEventListener('click', function (e) {              // 手機：點一下開／關
+      var el = target(e);
+      if (!el) { hide(); return; }
+      if (el.closest && el.closest('summary')) {                    // 泡泡在 <summary> 裡時，別讓 details 跟著開合
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      // 手機 tap 會先來一個合成 mouseover（已顯示）→ 350ms 內不再 toggle，避免一閃就消失
+      if (cur === el && Date.now() - shownAt > 350) hide(); else show(el);
+    });
+    window.addEventListener('scroll', hide, { passive: true });
+  }
+
+  /* ---------- 啟動 ---------- */
+  function boot() {
+    restoreTab();
+    bindTab();
+    bindDetails();
+    bindScroll();
+    updateTimes();
+    bindTips();
+    if (window.DD373TREND && window.DD373TREND.renderAll) window.DD373TREND.renderAll();   // 還原頁籤後用正確寬度重繪
+    restoreScroll();
+    setInterval(updateTimes, 60 * 1000);                            // 相對時間每 60 秒重算
+    setInterval(function () {                                       // 分頁可見時才檢查
+      if (document.visibilityState === 'visible') checkVersion();
+    }, pollMs());
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') { updateTimes(); checkVersion(); }
+    });
+  }
+
+  window.DD373PAGE = { restoreTab: restoreTab, bindTips: bindTips, shouldReload: shouldReload, checkVersion: checkVersion, updateTimes: updateTimes,
+                       relText: relText, durText: durText, freshState: freshState, ageMin: ageMin, nowMs: nowMs,
+                       pollMs: pollMs, builtMs: function () { return MY_BUILT; },
+                       setBuilt: function (v) { MY_BUILT = v; },
+                       preview: PREVIEW, fakeNow: FAKE_NOW };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script>
+</body>
+</html>

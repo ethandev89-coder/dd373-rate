@@ -49,6 +49,7 @@ ERR_RATIO_MAX = 0.4     # 錯誤台數比例超過此值 → 判定被擋
 
 TZ = dt.timezone(dt.timedelta(hours=8))      # Asia/Taipei（台灣無日光節約，固定 +8）
 TREND_JS = os.path.join(PAGE_DIR, "static", "trend.js")       # 走勢圖渲染器（單一檔案）
+TREND_JS_PREVIEW = os.path.join(PAGE_DIR, "static", "trend-next.js")   # 預覽版專用渲染器（驗收通過才併回 trend.js）
 APPLE_CSS = os.path.join(PAGE_DIR, "static", "apple.css")
 PAGE_JS = os.path.join(PAGE_DIR, "static", "page.js")     # 行為層（時間／輪詢／狀態還原）   # 蘋果風設計系統（build 時內嵌）   # 預覽版專用渲染器（改版期間不動正式版的 trend.js）   # 走勢圖渲染器（build 時內嵌進單檔頁面）
 
@@ -592,7 +593,8 @@ def build(d, prev):
     # ---- 走勢圖：資料 JSON + 視窗設定 + 渲染器（全部內嵌，維持單檔、無外部依賴）----
     apple_css = open(APPLE_CSS, encoding="utf-8").read()
     page_js_src = open(PAGE_JS, encoding="utf-8").read()
-    trend_js_src = open(TREND_JS, encoding="utf-8").read()
+    trend_path = TREND_JS_PREVIEW if (PREVIEW and os.path.exists(TREND_JS_PREVIEW)) else TREND_JS
+    trend_js_src = open(trend_path, encoding="utf-8").read()
     # 產頁時間一律帶（前端據此判斷有沒有新資料）；DD373_PREVIEW 只有預覽版才帶
     preview_flag = ('<script>window.DD373_BUILT="' + now.isoformat(timespec="seconds") + '";'
                     + ('window.DD373_PREVIEW=true;' if PREVIEW else '') + '</script>\n')
