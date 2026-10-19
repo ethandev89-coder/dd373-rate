@@ -386,12 +386,14 @@
     }
     if (!latest && real.length) latest = real[real.length - 1];
     if (latest) {
-      var ly = Y(latest.v), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
+      // 最新點若被標成離群，徽章要顯示原始值（跟 Hero、tooltip 同一顆數字；主線仍是平滑值）
+      var latestShown = latest.o ? latest.raw : latest.v;
+      var ly = Y(latestShown), bx = w - pd.r + 6, bw = pd.r - 12, bh = 18;
       ly = Math.min(Math.max(ly, pd.t + bh / 2), pd.t + ih - bh / 2);
       s.push('<rect class="badge" x="' + bx + '" y="' + (ly - bh / 2).toFixed(1) + '" width="' + bw +
              '" height="' + bh + '" rx="6"/>');
       s.push('<text class="badge-t" x="' + (bx + bw / 2) + '" y="' + (ly + 4.2).toFixed(1) +
-             '" text-anchor="middle">' + num(latest.v) + '</text>');
+             '" text-anchor="middle">' + num(latestShown) + '</text>');
     }
 
     // 十字線圖層（hover 時只更新這一層，不重繪整張圖）
