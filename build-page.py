@@ -540,7 +540,15 @@ def build(d, prev):
     # ---- 走勢圖資料（epoch 秒；時區換算一律在 JS 端 +8h 做）----
     stock_by_min = load_stock_by_minute()                   # 掛單量（萬天幣）：只對「同一分鐘」
     all_vw2_s = [(t, v, stock_by_min.get(t)) for t, v in all_vw2]   # s 缺就是 None → tooltip 不顯示掛單量
-    chart_real = hampel([(t, v) for t, v in all_vw2])       # 5 筆 Hampel：主線用平滑值、離群原始值另存
+    # 離群門檻：預覽版讀 hampel_next.py（多一道「中位數×2%」下限）；驗收通過後才併回上面的 hampel()
+    hampel_fn = hampel
+    if PREVIEW:
+        try:
+            import hampel_next
+            hampel_fn = hampel_next.hampel
+        except Exception as e:
+            print(f"[preview] hampel_next 載入失敗，退回舊規則：{e}", flush=True)
+    chart_real = hampel_fn([(t, v) for t, v in all_vw2])   # 5 筆 Hampel：主線用平滑值、離群原始值另存
     real_stock = {t: s for t, _v, s in all_vw2_s}
     est_stock = {t: stock_by_min.get(t) for t, _v in est_all}       # 估算段：同一分鐘的舊掃描值
     # 降採樣：7 天窗＝1 小時中位數（＋min–max 帶）；30 天窗＝4 小時
@@ -549,7 +557,7 @@ def build(d, prev):
     # 聚合後的離群標記（5 筆 Hampel，跟原始序列同一套規則）
     chart_agg = {}
     for key, rows in (("7d", agg7), ("30d", agg30)):
-        h = hampel([(t, med) for t, med, _lo, _hi, _n, _s in rows])
+        h = hampel_fn([(t, med) for t, med, _lo, _hi, _n, _s in rows])
         chart_agg[key] = [[ep(t), round(pv, 1), round(raw, 1), 1 if o else 0,
                            round(rows[i][2], 1), round(rows[i][3], 1), rows[i][4],
                            round(rows[i][5]) if rows[i][5] is not None else None]
