@@ -475,6 +475,16 @@
       ? fmtDate(t0) + ' ' + fmtHM(t0) + '–' + fmtHM(t1)
       : fmtFull(t0) + '–' + fmtFull(t1);
   }
+  // 掛單量那一行：STOCK_BREAK（台北 10/18 11:07）之前的掛單量只抓第 1 頁、偏低約一半，
+  // 所以整行不顯示（連「薄市場」一起）——與下方掛單量面板「不畫舊值」一致。
+  // 合併點（7 天 1 小時／30 天 4 小時）用時段起點 p.t 判斷。
+  function ttStockHtml(p) {
+    if (!p || !(p.t >= STOCK_BREAK)) return '';
+    var stxt = fmtStock(p.s);
+    if (!stxt) return '';
+    return '<div class="stk">掛單 ' + stxt +
+           (isThinStock(p.s) ? ' <span class="tag">薄市場</span>' : '') + '</div>';
+  }
   // 最後一行：離群點 > 合併點 > 估算 > 一般實測（一般實測不顯示）
   function ttTailText(p, aggLabel) {
     if (p.o) return '離群點・線上畫 ' + num(p.v);
@@ -580,10 +590,8 @@
       difftxt = '較前一筆 <span class="' + dd.cls + '">' + dtxt + '</span>' +
                 (dp ? '（<span class="' + dp.cls + '">' + dp.txt + '</span>）' : '');
     }
-    // 掛單量（市場總掛單）：該時點最近一次掃描的 stock_wj；估算段是舊全服掃描（約 5 小時一筆）
-    var stxt = fmtStock(p.s);
-    var stockHtml = stxt ? '<div class="stk">掛單 ' + stxt +
-                           (isThinStock(p.s) ? ' <span class="tag">薄市場</span>' : '') + '</div>' : '';
+    // 掛單量（市場總掛單）：該時點最近一次掃描的 stock_wj；10/18 11:07 之前整行不顯示
+    var stockHtml = ttStockHtml(p);
     var tail = ttTailText(p, st.aggLabel);
     tt.innerHTML =
       '<div class="t1">' + ttTimeText(p, st.aggSec) + '</div>' +
@@ -676,7 +684,7 @@
                         dirOf: dirOf, dirPct: dirPct,
                         fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK,
                         chooseStockBucket: chooseStockBucket, medianOf: medianOf, barPath: barPath,
-                        ttTimeText: ttTimeText, ttTailText: ttTailText,
+                        ttTimeText: ttTimeText, ttTailText: ttTailText, ttStockHtml: ttStockHtml,
                         STOCK_BREAK: STOCK_BREAK, STOCK_BUCKETS: STOCK_BUCKETS };
 
   var WINCFG = window.DD373WINDOWS || [];

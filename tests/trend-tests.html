@@ -201,6 +201,20 @@ eq('合併點：這 4 小時', T.ttTailText({ o: false, n: 9, hi: 1012, lo: 970,
 eq('離群點：線上畫的是平滑值', T.ttTailText({ o: true, v: 899.4, n: 0, src: 'real' }, '1 小時'),
    '離群點・線上畫 899');
 
+log.push('== tooltip 掛單行：STOCK_BREAK（台北 10/18 11:07）以前整行不顯示 ==');
+var TB = tp('2026-10-18 11:07');
+eq('分界時點＝台北 10/18 11:07', T.fmtFull(T.STOCK_BREAK), '10/18 11:07');
+eq('7 天合併點 10/16 09:00（起點在分界前）→ 不顯示，含薄市場',
+   T.ttStockHtml({ t: tp('2026-10-16 09:00'), n: 7, lo: 900, hi: 1000, s: 14300 }), '');
+eq('分界前 1 秒 → 不顯示', T.ttStockHtml({ t: TB - 1, s: 31600 }), '');
+eq('剛好分界 → 顯示（不含薄市場）', T.ttStockHtml({ t: TB, s: 31600 }),
+   '<div class="stk">掛單 3.16 億</div>');
+eq('分界後 2 億以下 → 顯示＋薄市場', T.ttStockHtml({ t: tp('2026-10-19 16:00'), s: 16415 }),
+   '<div class="stk">掛單 1.64 億 <span class="tag">薄市場</span></div>');
+eq('分界後但沒有掛單量 → 不顯示', T.ttStockHtml({ t: tp('2026-10-19 16:00'), s: null }), '');
+eq('估算段（10/14）即使有掛單量也不顯示', T.ttStockHtml({ t: tp('2026-10-14 12:00'), v: 950, s: 20000 }), '');
+eq('沒有 t（空物件）→ 不顯示、不炸', T.ttStockHtml({}), '');
+
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';
 
