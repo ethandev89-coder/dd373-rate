@@ -435,6 +435,7 @@
 
     CHARTS[win.id] = { win: win, host: host, w: w, h: h, H: H, cw: host.clientWidth, pd: pd, iw: iw, ih: ih,
                        bars: barEls, sbucket: sbucket, barBase: barBase,
+                       aggSec: useAgg ? (win.agg === '7d' ? 3600 : 14400) : 0,
                        x0: x0, x1: x1, y0: y0, y1: y1, X: X, Y: Y, real: real, est: est,
                        hoverPts: hoverPts, step: step, plan: plan, useAgg: useAgg,
                        aggLabel: useAgg ? (win.agg === '7d' ? '1 小時' : '4 小時') : null };
@@ -463,6 +464,23 @@
     el.innerHTML = '本時窗 <span class="' + d.cls + '">' + d.txt + '</span>' +
                    '　高 <b>' + num(hi) + '</b>　低 <b>' + num(lo) + '</b>' +
                    (hasEst ? '　<span class="tag">含估算</span>' : '');
+  }
+
+  /* ---------- tooltip 文字（純函式，測試用） ---------- */
+  // 時間：一般點＝絕對時間；合併點（p.n 有值）＝時段範圍（同一天只寫一次日期）
+  function ttTimeText(p, aggSec) {
+    if (!p.n || !aggSec) return fmtFull(p.t);
+    var t0 = p.t, t1 = p.t + aggSec;
+    return fmtDate(t0) === fmtDate(t1)
+      ? fmtDate(t0) + ' ' + fmtHM(t0) + '–' + fmtHM(t1)
+      : fmtFull(t0) + '–' + fmtFull(t1);
+  }
+  // 最後一行：離群點 > 合併點 > 估算 > 一般實測（一般實測不顯示）
+  function ttTailText(p, aggLabel) {
+    if (p.o) return '離群點・線上畫 ' + num(p.v);
+    if (p.n) return '這 ' + (aggLabel || '') + '：高 ' + num(p.hi) + '・低 ' + num(p.lo);
+    if (p.src === 'est') return '估算值';
+    return '';
   }
 
   /* ---------- 十字線＋tooltip（pointer events：滑鼠／觸控共用） ---------- */
@@ -566,14 +584,13 @@
     var stxt = fmtStock(p.s);
     var stockHtml = stxt ? '<div class="stk">掛單 ' + stxt +
                            (isThinStock(p.s) ? ' <span class="tag">薄市場</span>' : '') + '</div>' : '';
+    var tail = ttTailText(p, st.aggLabel);
     tt.innerHTML =
-      '<div class="t1">' + fmtFull(p.t) + '</div>' +
+      '<div class="t1">' + ttTimeText(p, st.aggSec) + '</div>' +
       '<div class="v">' + num(shown) + ' 天幣/元</div>' +
       stockHtml +
       (difftxt ? '<div>' + difftxt + '</div>' : '') +
-      '<div class="src">來源：' + (p.src === 'real' ? '實測' : '估算') +
-      (p.n ? '（' + (st.aggLabel || '') + '中位數・' + p.n + ' 筆；區間 ' + num(p.lo) + '–' + num(p.hi) + '）'
-           : (p.o ? '（離群點・原始值；主線為中位數 ' + num(p.v) + '）' : '')) + '</div>';
+      (tail ? '<div class="src">' + tail + '</div>' : '');
     tt.classList.add('on');
 
     var tw = tt.offsetWidth, th = tt.offsetHeight;
@@ -659,6 +676,7 @@
                         dirOf: dirOf, dirPct: dirPct,
                         fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK,
                         chooseStockBucket: chooseStockBucket, medianOf: medianOf, barPath: barPath,
+                        ttTimeText: ttTimeText, ttTailText: ttTailText,
                         STOCK_BREAK: STOCK_BREAK, STOCK_BUCKETS: STOCK_BUCKETS };
 
   var WINCFG = window.DD373WINDOWS || [];

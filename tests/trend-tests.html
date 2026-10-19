@@ -186,6 +186,21 @@ eq('柱形路徑：左下起、上緣 2px 圓角、底邊平', T.barPath(10, 5, 
 eq('口徑分界＝台北 2026-10-18 11:07（epoch）', T.STOCK_BREAK, Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000));
 eq('分桶級距表＝15分～1天共 9 級', T.STOCK_BUCKETS.length, 9);
 
+log.push('== tooltip 文字（時間範圍／最後一行） ==');
+var T16 = Math.floor(Date.UTC(2026, 9, 19, 8, 0) / 1000);      // 台北 10/19 16:00
+var T20 = Math.floor(Date.UTC(2026, 9, 18, 12, 0) / 1000);     // 台北 10/18 20:00
+eq('合併點時間：1 小時段（同一天）', T.ttTimeText({ t: T16, n: 5 }, 3600), '10/19 16:00–17:00');
+eq('合併點時間：4 小時段（跨日要寫出日期）', T.ttTimeText({ t: T20, n: 3 }, 14400), '10/18 20:00–10/19 00:00');
+eq('一般點時間：絕對時間', T.ttTimeText({ t: T16 }, 0), '10/19 16:00');
+eq('一般實測點：沒有最後一行', T.ttTailText({ o: false, src: 'real' }, ''), '');
+eq('估算點：只寫估算值', T.ttTailText({ o: false, src: 'est' }, ''), '估算值');
+eq('合併點：這 1 小時＋高低', T.ttTailText({ o: false, n: 12, hi: 998, lo: 960, src: 'real' }, '1 小時'),
+   '這 1 小時：高 998・低 960');
+eq('合併點：這 4 小時', T.ttTailText({ o: false, n: 9, hi: 1012, lo: 970, src: 'real' }, '4 小時'),
+   '這 4 小時：高 1,012・低 970');
+eq('離群點：線上畫的是平滑值', T.ttTailText({ o: true, v: 899.4, n: 0, src: 'real' }, '1 小時'),
+   '離群點・線上畫 899');
+
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';
 
