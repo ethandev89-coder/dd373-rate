@@ -37,16 +37,32 @@
   function isMidnight(t) { var p = tp(t); return p.h === 0 && p.m === 0; }
   function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
   var THIN_STOCK = 20000;
-  var STOCK_BREAK = Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000);   // 台北 2026-10-18 11:07：掛單量改抓「全部頁數」
-  var BAR_ZONE = 0.30;                    // 掛單量柱狀區佔繪圖高度的比例（貼在底部）                   // 掛單量 < 2 億天幣＝薄市場（與 Hero tag 同一門檻；單位萬天幣）
+  var STOCK_BREAK = Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000);   // 台北 2026-10-18 11:07：掛單量改抓「全部頁數」（之前的舊值不畫）
+  var STOCK_BUCKETS = [900, 1800, 3600, 7200, 10800, 14400, 21600, 43200, 86400];   // 15分／30分／1時／2時／3時／4時／6時／12時／1天
   function fmtStock(v) {                    // 掛單量：萬天幣 → 「1.65 億」／「8,300 萬」
     if (v === null || v === undefined) return null;
     return v >= 10000 ? (v / 10000).toFixed(2) + ' 億' : num(v) + ' 萬';
   }
   function isThinStock(v) { return v !== null && v !== undefined && v < THIN_STOCK; }
-  function fmtStockAxis(v) {               // 掛單量右軸刻度：2 億／1.5 億／0
-    if (!(v > 0)) return '0';
-    return v >= 10000 ? (v / 10000).toFixed(v % 10000 === 0 ? 0 : 1) + ' 億' : num(v);
+  function chooseStockBucket(iw, span) {   // 挑「每格寬 ≥ 9px」的最小級距（依實際圖寬）
+    for (var i = 0; i < STOCK_BUCKETS.length; i++) {
+      if (iw * STOCK_BUCKETS[i] / span >= 9) return STOCK_BUCKETS[i];
+    }
+    return STOCK_BUCKETS[STOCK_BUCKETS.length - 1];
+  }
+  function medianOf(arr) {                 // 桶內中位數（偶數取中間兩筆平均）
+    var a = arr.slice().sort(function (x, y) { return x - y; });
+    var n = a.length;
+    return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+  }
+  function barPath(x, w, yTop, yBot) {     // 柱：上緣 2px 圓角、底部平
+    var r = Math.max(0, Math.min(2, w / 2, yBot - yTop));
+    return 'M' + x.toFixed(1) + ',' + yBot.toFixed(1) +
+           ' V' + (yTop + r).toFixed(1) +
+           ' Q' + x.toFixed(1) + ',' + yTop.toFixed(1) + ' ' + (x + r).toFixed(1) + ',' + yTop.toFixed(1) +
+           ' H' + (x + w - r).toFixed(1) +
+           ' Q' + (x + w).toFixed(1) + ',' + yTop.toFixed(1) + ' ' + (x + w).toFixed(1) + ',' + (yTop + r).toFixed(1) +
+           ' V' + yBot.toFixed(1) + ' Z';
   }
   /* 漲跌方向（台股慣例）：數字變大＝紅 ▲、數字變小＝綠 ▼；
      四捨五入（digits 位）後為 0 就不加箭頭、用灰色。回傳 { cls, arrow, a }，a 已四捨五入。 */
@@ -237,29 +253,35 @@
     }
     var step = plan.step;
 
-    // ---- 掛單量柱：市場總掛單（萬天幣）。只畫實測點；估算段沒有逐筆掛單量可比 ----
-    var stockPts = real.filter(function (p) { return p.s !== null && p.s !== undefined && p.s > 0; });
-    var sTop = 0;
-    stockPts.forEach(function (p) { if (p.s > sTop) sTop = p.s; });
-    // 上限取整到 0.5 億；只在 0 與上限標刻度（中間由 2 億薄市場虛線當參考），避免小圖擠一排字
-    if (sTop > 0) sTop = Math.ceil(sTop / 5000) * 5000;
-    var sTicks = sTop > 0 ? [0, sTop] : [];
-    var barTop = pd.t + ih * (1 - BAR_ZONE), barBase = pd.t + ih;
-    function SY(v) { return barBase - (v / sTop) * (barBase - barTop); }
-    var dts = [];
-    for (var di = 1; di < real.length; di++) dts.push(real[di].t - real[di - 1].t);
-    dts.sort(function (a, b) { return a - b; });
-    var medDt = dts.length ? dts[Math.floor(dts.length / 2)] : 3600;
-    var bw = Math.max(1.2, Math.min(9, iw * medDt / (x1 - x0) * 0.62));
-    // 價格徽章的位置（右軸掛單量刻度要避開它，兩種刻度才不會疊在一起）
-    var latestPt = null;
-    for (var li2 = DATA.real.length - 1; li2 >= 0; li2--) {
-      if (DATA.real[li2].t <= now && DATA.real[li2].t >= x0) { latestPt = DATA.real[li2]; break; }
+    // ---- 掛單量小面板：價格區下方、共用同一條時間軸 ----
+    var sbucket = chooseStockBucket(iw, x1 - x0);
+    var slotPx = iw * sbucket / (x1 - x0);
+    var barH = w >= 560 ? 40 : 32;                    // 柱區高：桌機 40／手機 32
+    var labelY = pd.t + ih + 12 + 9;                  // 價格區底 → 12px → 小標「掛單量」
+    var barTop = pd.t + ih + 12 + 14 + 6;             // 小標 → 6px → 柱區
+    var barBase = barTop + barH;
+    var axisY = barBase + 14;                         // 時間刻度移到柱區下方
+    var H = axisY + 4;
+
+    // 先分桶再畫：每桶＝該時段所有點的中位數；只收 10/18 11:07 之後的全頁數字
+    var buckets = {};
+    for (var ri = 0; ri < DATA.real.length; ri++) {
+      var rp = DATA.real[ri];
+      if (rp.t < x0 || rp.t > now || rp.t < STOCK_BREAK) continue;
+      if (rp.s === null || rp.s === undefined || !(rp.s > 0)) continue;
+      var bk = Math.floor((rp.t + TZOFF) / sbucket) * sbucket - TZOFF;
+      (buckets[bk] = buckets[bk] || []).push(rp.s);
     }
-    var badgeY = latestPt ? Y(latestPt.v) : null;
+    var slots = Object.keys(buckets).map(Number).sort(function (a, b) { return a - b; })
+      .map(function (k) { return { t: k, v: medianOf(buckets[k]) }; });
+    var maxS = 0, si;
+    for (si = 0; si < slots.length; si++) if (slots[si].v > maxS) maxS = slots[si].v;
+    var sMax = Math.max(maxS, THIN_STOCK) * 1.15;     // 縱軸 0～max(區間最大, 2 億)×1.15，不標數字
+    var barW = Math.max(2, slotPx * 0.7);
+    function SY(v) { return barBase - (v / sMax) * barH; }
 
     var s = [];
-    s.push('<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" ' +
+    s.push('<svg width="' + w + '" height="' + H + '" viewBox="0 0 ' + w + ' ' + H + '" ' +
            'font-family="-apple-system,PingFang TC,Microsoft JhengHei,sans-serif" role="img" ' +
            'aria-label="' + esc(win.label + ' 走勢') + '">');
 
@@ -288,29 +310,22 @@
              '" text-anchor="end">' + num(v) + '</text>');
     });
 
-    // 掛單量柱：貼在圖底；深淺色／線寬都交給 CSS
-    // 10/18 11:07 前只抓第 1 頁（數字被低估約一半）→ 用灰色柱，避免被讀成「賣壓翻倍」
-    if (stockPts.length) {
-      stockPts.forEach(function (p) {
-        var by = SY(p.s);
-        s.push('<rect class="bar' + (p.t < STOCK_BREAK ? ' bar-old' : '') + '" x="' + (X(p.t) - bw / 2).toFixed(1) +
-               '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, barBase - by).toFixed(1) + '"/>');
-      });
-      if (sTop >= THIN_STOCK) {                                  // 薄市場門檻 2 億（與 Hero tag 同一門檻）
-        var ty = SY(THIN_STOCK);
-        s.push('<line class="thin-stock" x1="' + pd.l + '" y1="' + ty.toFixed(1) +
-               '" x2="' + (pd.l + iw) + '" y2="' + ty.toFixed(1) + '"/>');
-        s.push('<text class="stock-tick" x="' + (pd.l + 3) + '" y="' + (ty - 3).toFixed(1) +
-               '" text-anchor="start">2 億</text>');
-      }
-      s.push('<line class="stock-grid" x1="' + pd.l + '" y1="' + barTop.toFixed(1) +
-             '" x2="' + (pd.l + iw) + '" y2="' + barTop.toFixed(1) + '"/>');   // 柱區頂端＝右軸上限，給刻度一個依據
-      sTicks.forEach(function (v) {                              // 右軸刻度（跟價格徽章重疊的那格不標）
-        var yy = SY(v);
-        if (badgeY !== null && Math.abs(yy - badgeY) < 12) return;
-        s.push('<text class="stock-axis" x="' + (pd.l + iw + 6) + '" y="' + (yy + 3.2).toFixed(1) +
-               '" text-anchor="start">' + fmtStockAxis(v) + '</text>');
-      });
+    // 掛單量面板：小標（不放數字）＋2 億虛線（畫在柱後面）＋柱
+    s.push('<text class="stock-label" x="' + pd.l + '" y="' + labelY.toFixed(1) + '" text-anchor="start">掛單量</text>');
+    var thinY = SY(THIN_STOCK);
+    s.push('<line class="stock-thin" x1="' + pd.l + '" y1="' + thinY.toFixed(1) +
+           '" x2="' + (pd.l + iw) + '" y2="' + thinY.toFixed(1) + '"/>');
+    s.push('<text class="stock-unit" x="' + (pd.l + iw + 6) + '" y="' + (thinY + 3.2).toFixed(1) +
+           '" text-anchor="start">2 億</text>');
+    for (si = 0; si < slots.length; si++) {
+      var sl = slots[si];
+      var cls = 'sbar' + (sl.v < THIN_STOCK ? ' sbar-thin' : (si === slots.length - 1 ? ' sbar-last' : ''));
+      s.push('<path class="' + cls + '" data-t="' + sl.t + '" d="' +
+             barPath(X(sl.t) + (slotPx - barW) / 2, barW, SY(sl.v), barBase) + '"/>');
+    }
+    if (slots.length && slots[0].t > x0 + sbucket) {           // 時窗比資料長 → 標出資料起點
+      s.push('<text class="stock-since" x="' + (X(slots[0].t) - slotPx / 2 - 4).toFixed(1) +
+             '" y="' + (barBase - 2).toFixed(1) + '" text-anchor="end">10/18 起</text>');
     }
 
     // 圖上註記：垂直虛線標記（例：開始實測）
@@ -375,7 +390,7 @@
       var anchor = 'middle';
       if (cx - est / 2 < 2) anchor = 'start';
       else if (cx + est / 2 > w - 2) anchor = 'end';
-      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + (h - 10) +
+      s.push('<text class="xtick" x="' + cx.toFixed(1) + '" y="' + axisY +
              '" text-anchor="' + anchor + '">' + txt + '</text>');
     });
 
@@ -398,7 +413,7 @@
 
     // 十字線圖層（hover 時只更新這一層，不重繪整張圖）
     s.push('<g class="cross-g" visibility="hidden">' +
-           '<line class="cross" x1="0" y1="' + pd.t + '" x2="0" y2="' + (pd.t + ih) + '"/>' +
+           '<line class="cross" x1="0" y1="' + pd.t + '" x2="0" y2="' + barBase + '"/>' +
            '<circle class="cross-dot" cx="0" cy="0" r="4"/></g>');
 
     s.push('</svg>');
@@ -412,7 +427,14 @@
                       }))
                       .sort(function (a, b) { return a.t - b.t; });
 
-    CHARTS[win.id] = { win: win, host: host, w: w, h: h, cw: host.clientWidth, pd: pd, iw: iw, ih: ih,
+    var barEls = {};
+    Array.prototype.forEach.call(host.querySelectorAll('path.sbar'), function (el) {
+      el.setAttribute('data-base', el.getAttribute('class'));
+      barEls[+el.getAttribute('data-t')] = el;
+    });
+
+    CHARTS[win.id] = { win: win, host: host, w: w, h: h, H: H, cw: host.clientWidth, pd: pd, iw: iw, ih: ih,
+                       bars: barEls, sbucket: sbucket, barBase: barBase,
                        x0: x0, x1: x1, y0: y0, y1: y1, X: X, Y: Y, real: real, est: est,
                        hoverPts: hoverPts, step: step, plan: plan, useAgg: useAgg,
                        aggLabel: useAgg ? (win.agg === '7d' ? '1 小時' : '4 小時') : null };
@@ -477,6 +499,22 @@
     var g = st.host.querySelector('g.cross-g');
     if (g) g.setAttribute('visibility', 'hidden');
     if (st.host.__tt) st.host.__tt.classList.remove('on');
+    highlightBar(st, null);                 // 收起時把柱的顏色還原
+  }
+
+  /* 游標所在時段的柱變 --accent（優先於薄市場／最新色；還原時回到原本那組 class） */
+  function highlightBar(st, t) {
+    if (!st || !st.bars) return;
+    var el = null;
+    if (t !== null && t !== undefined) {
+      var k = Math.floor((t + TZOFF) / st.sbucket) * st.sbucket - TZOFF;
+      el = st.bars[k] || null;
+    }
+    if (st.__hoverBar && st.__hoverBar !== el) {
+      st.__hoverBar.setAttribute('class', st.__hoverBar.getAttribute('data-base') || 'sbar');
+    }
+    st.__hoverBar = el;
+    if (el) el.setAttribute('class', (el.getAttribute('data-base') || 'sbar') + ' sbar-hover');
   }
 
   function hoverAt(win, ev) {
@@ -497,6 +535,7 @@
     if (outBest !== null && outD <= 4) best = outBest;
     if (!best && best !== 0) return;
     var p = st.hoverPts[best], prev = best > 0 ? st.hoverPts[best - 1] : null;
+    highlightBar(st, p.t);
 
     var g = host.querySelector('g.cross-g');
     var cx = st.X(p.t), cy = st.Y(p.v);
@@ -541,7 +580,7 @@
     var left = cx + 12;
     if (left + tw > st.w - 4) left = cx - tw - 12;
     if (left < 4) left = 4;
-    var top = Math.min(Math.max(py - th - 10, 4), st.h - th - 4);
+    var top = Math.min(Math.max(py - th - 10, 4), st.H - th - 4);
     tt.style.left = left.toFixed(1) + 'px';
     tt.style.top = top.toFixed(1) + 'px';
   }
@@ -574,24 +613,10 @@
     return d;
   }
 
-  // 圖例多一行「掛單量」：這裡補（不進 builder），改版驗收通過再併回正式版
-  function addLegend() {
-    var lgd = document.querySelector('.lgd');
-    if (!lgd || lgd.querySelector('.lg-bar')) return;
-    var sp = document.createElement('span');
-    sp.className = 'li';
-    sp.setAttribute('data-tip', '下方橘色柱＝當下市場總掛單量（億天幣）。10/18 11:07 以前只抓第 1 頁、數字被低估，所以畫成灰色；掉到 2 億以下＝薄市場。');
-    sp.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true">' +
-                   '<rect class="lg-bar" x="1" y="4" width="8" height="7" rx="1"/>' +
-                   '<rect class="lg-bar-old" x="11" y="4" width="8" height="7" rx="1"/></svg>掛單量';
-    lgd.appendChild(sp);
-  }
-
   function boot() {
     var el = document.getElementById('chart-data');
     if (!el) return;
     DATA = normalize(JSON.parse(el.textContent));
-    addLegend();
     renderAll();
     if (window.ResizeObserver) {
       var ro = new ResizeObserver(function () {
@@ -633,7 +658,8 @@
                         fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS,
                         dirOf: dirOf, dirPct: dirPct,
                         fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK,
-                        fmtStockAxis: fmtStockAxis, STOCK_BREAK: STOCK_BREAK, BAR_ZONE: BAR_ZONE };
+                        chooseStockBucket: chooseStockBucket, medianOf: medianOf, barPath: barPath,
+                        STOCK_BREAK: STOCK_BREAK, STOCK_BUCKETS: STOCK_BUCKETS };
 
   var WINCFG = window.DD373WINDOWS || [];
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

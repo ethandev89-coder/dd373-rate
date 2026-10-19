@@ -168,13 +168,23 @@ eq('fmtStock(null) → null（沒有資料就不顯示那一行）', T.fmtStock(
 eq('薄市場門檻 2 億：19999 是、20000 不是', [T.isThinStock(19999), T.isThinStock(20000)], [true, false]);
 eq('isThinStock(null) → false', T.isThinStock(null), false);
 
-log.push('== 掛單量柱：右軸刻度與口徑分界 ==');
-eq('fmtStockAxis(0) → 0', T.fmtStockAxis(0), '0');
-eq('fmtStockAxis(20000) → 2 億（整億不帶小數）', T.fmtStockAxis(20000), '2 億');
-eq('fmtStockAxis(15000) → 1.5 億', T.fmtStockAxis(15000), '1.5 億');
-eq('fmtStockAxis(50000) → 5 億', T.fmtStockAxis(50000), '5 億');
+log.push('== 掛單量面板：分桶級距／中位數／柱形／口徑分界 ==');
+// 分桶：挑「每格寬 ≥ 9px」的最小級距（級距 15分～1天）
+eq('桌機 24h（內寬 738、span 86400）→ 30 分', T.chooseStockBucket(738, 86400), 1800);
+eq('桌機 48h → 1 時', T.chooseStockBucket(738, 172800), 3600);
+eq('桌機 7d → 3 時', T.chooseStockBucket(738, 604800), 10800);
+eq('桌機 30d → 12 時', T.chooseStockBucket(738, 2592000), 43200);
+eq('手機 24h（內寬 234）→ 1 時', T.chooseStockBucket(234, 86400), 3600);
+eq('極窄也一定會回一個級距（不會 undefined）', T.chooseStockBucket(100, 2592000), 86400);
+eq('每格寬都 ≥ 9px（桌機 7d）：3 時 →', (738 * 10800 / 604800) >= 9, true);
+eq('再小一級就不合格（7d 的 2 時＝8.79px < 9）', (738 * 7200 / 604800) >= 9, false);
+eq('中位數：奇數', T.medianOf([3, 1, 2]), 2);
+eq('中位數：偶數取中間兩筆平均', T.medianOf([4, 1, 3, 2]), 2.5);
+eq('中位數：單筆', T.medianOf([7]), 7);
+eq('柱形路徑：左下起、上緣 2px 圓角、底邊平', T.barPath(10, 5, 20, 40),
+   'M10.0,40.0 V22.0 Q10.0,20.0 12.0,20.0 H13.0 Q15.0,20.0 15.0,22.0 V40.0 Z');
 eq('口徑分界＝台北 2026-10-18 11:07（epoch）', T.STOCK_BREAK, Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000));
-eq('柱狀區佔繪圖高度 30%（貼底部）', T.BAR_ZONE, 0.3);
+eq('分桶級距表＝15分～1天共 9 級', T.STOCK_BUCKETS.length, 9);
 
 document.getElementById('unit').innerHTML = log.join('\n') + '\n<b>' +
   (fail === 0 ? '✅ 單元測試全部通過' : '❌ 單元測試有失敗') + '：' + pass + ' passed, ' + fail + ' failed</b>';

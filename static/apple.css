@@ -200,13 +200,16 @@ tr.me td.nm { font-weight: 600; }
 .chart svg .note-band { fill: var(--fill); }
 .chart svg .note-line { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .chart svg .note-txt { fill: var(--label-2); font-size: 11px; }
-/* 掛單量柱（貼圖底）：橘色＝現行口徑；灰＝10/18 11:07 前只抓第 1 頁的舊口徑 */
-.chart svg .bar { fill: var(--warn); fill-opacity: .45; stroke: none; }
-.chart svg .bar-old { fill: var(--gray); fill-opacity: .45; }
-.chart svg .thin-stock { stroke: var(--label-2); stroke-width: 1; stroke-dasharray: 3 3; }
-.chart svg .stock-grid { stroke: var(--sep); stroke-width: 1; }
-.chart svg .stock-tick { fill: var(--label-2); font-size: 10px; }
-.chart svg .stock-axis { fill: var(--label-2); font-size: 10px; }
+/* 掛單量小面板（價格區下方、獨立一套）：顏色全部走 token
+   優先順序：游標(--accent) > 薄市場(--warn) > 最新(--label-2) > 一般(--label-3) */
+.chart svg .stock-label { fill: var(--label-2); font-size: 11px; }
+.chart svg .stock-thin { stroke: var(--label-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.chart svg .stock-unit { fill: var(--label-3); font-size: 10px; }
+.chart svg .stock-since { fill: var(--label-3); font-size: 10px; }
+.chart svg .sbar { fill: var(--label-3); }
+.chart svg .sbar-last { fill: var(--label-2); }
+.chart svg .sbar-thin { fill: var(--warn); fill-opacity: .8; }
+.chart svg .sbar-hover { fill: var(--accent); fill-opacity: 1; }
 
 /* 圖例（分段控制下方同一行） */
 .lgd { display: flex; gap: 16px; align-items: center; font-size: 13px; color: var(--label-2); margin: 0 0 8px; }
@@ -215,8 +218,6 @@ tr.me td.nm { font-weight: 600; }
 .lgd .lg-real { stroke: var(--accent); stroke-width: 2; }
 .lgd .lg-est { stroke: var(--gray); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .lgd .lg-band { fill: var(--accent); fill-opacity: .10; }
-.lgd .lg-bar { fill: var(--warn); fill-opacity: .55; }
-.lgd .lg-bar-old { fill: var(--gray); fill-opacity: .45; }
 
 /* 本時窗摘要（圖上方一行） */
 .wsum { font-size: 13px; color: var(--label-2); margin: 0 0 4px; }

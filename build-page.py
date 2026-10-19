@@ -201,11 +201,37 @@ def fetch_sweep(force=False):
 
 
 def prev_sweep():
-    """回傳上一次掃描（給「vs 上次」用）。"""
+    """回傳上一次掃描（保留給舊呼叫端；排行已改用 24 小時前，見 values_at_24h_ago）。"""
     if not os.path.exists(SWEEP_HISTORY):
         return None
     hist = json.load(open(SWEEP_HISTORY, encoding="utf-8"))
     return hist[-2] if len(hist) >= 2 else None
+
+
+def values_at_24h_ago(cut):
+    """每服在「最接近、且不晚於 cut」那筆 sweep 的 ② 值（給排行 vs 24 小時前用）。
+
+    為什麼不是「上一次掃描」：Hero 的 24 小時漲跌是跟 24 小時前比，
+    排行若跟上一小時比，同一個數字會出現 Hero ▲0.7%、排行 ▼0.7% 的矛盾。
+    sweep-history 是時間遞增，逐筆覆蓋 → 最後留下的就是 cut 之前最新的一筆。
+    """
+    out = {}
+    try:
+        hist = json.load(open(SWEEP_HISTORY, encoding="utf-8"))
+    except Exception:
+        return out
+    for run in hist:
+        try:
+            ts = dt.datetime.fromisoformat(run["ts"]).replace(tzinfo=None)
+        except Exception:
+            continue
+        if ts > cut.replace(tzinfo=None):
+            continue
+        for srv in (run.get("servers") or []):
+            v = srv.get("vw2_gold_per_twd")
+            if v:
+                out[srv["server"]] = v
+    return out
 
 
 # ---------- 歷史序列（cron 實買口徑，趨勢用） ----------
@@ -452,7 +478,19 @@ def build(d, prev):
             return "flat", "0.0%"
         return ("up", f"▲ {a:.1f}%") if pct > 0 else ("down", f"▼ {a:.1f}%")
 
-    prev_by_name = {x["server"]: x for x in (prev["servers"] if prev else [])}
+    s_now = load_vw2_series(24, "vw2_gold_per_twd")     # ② 買滿 5,000 萬天幣加權（15 分輕掃 + 每小時全服）
+    all_vw2 = load_vw2_series(24 * 31, "vw2_gold_per_twd")
+    now_vw2 = s_now[-1][1] if s_now else None
+    t_now = dt.datetime.now()
+    latest_txt = (f"最新 <b>{now_vw2:,.0f}</b> @ {t_now:%H:%M}" if now_vw2 else "—")
+    span_h = (all_vw2[-1][0] - all_vw2[0][0]).total_seconds() / 3600 if all_vw2 else 0
+
+    # 排行 vs 24 小時前（與 Hero 的 24 小時漲跌同一把尺）；找不到就顯示「—」
+    chg24_cut = t_now - dt.timedelta(hours=24)
+    prev24_pt = next((p for p in reversed(all_vw2) if p[0] <= chg24_cut), None)   # 跟 Hero 用同一筆
+    ref24_by_name = values_at_24h_ago(chg24_cut)
+    if prev24_pt:
+        ref24_by_name[USER_SERVER] = prev24_pt[1]      # 飛馬：用 Hero 那條合併序列，兩邊百分比才會一模一樣
 
     # ---------- 全服排行列（飛馬置頂、其餘依 ② 由大到小；第 2 行放細節） ----------
     rank_of = {srv["server"]: i for i, srv in enumerate(by_vw, 1)}
@@ -462,10 +500,10 @@ def build(d, prev):
     full_stock = load_stock_full()          # 每日全頁掃描（缺就退回 sweep 的第 1 頁值）
     rank_rows = []
     for srv in order:
-        o = prev_by_name.get(srv["server"])
-        pct = delta_pct(srv["vw2_gold_per_twd"], o["vw2_gold_per_twd"] if o else None)
-        srv_cls, dl_txt = arrow_of(pct)
         is_me = (srv is me)
+        # 飛馬：現值用 Hero 那顆（合併序列最新點）、基期用同一條序列的 24 小時前值 → 兩處百分比一模一樣
+        pct = delta_pct(now_vw2 if is_me else srv["vw2_gold_per_twd"], ref24_by_name.get(srv["server"]))
+        srv_cls, dl_txt = arrow_of(pct)
         rank_rows.append(
             f'<div class="rrow{" me" if is_me else ""}">'
             f'<div class="rline1"><span class="rk">{rank_of[srv["server"]]}</span>'
@@ -478,12 +516,6 @@ def build(d, prev):
             f'</div></div>')
 
 
-    s_now = load_vw2_series(24, "vw2_gold_per_twd")     # ② 買滿 5,000 萬天幣加權（15 分輕掃 + 每小時全服）
-    all_vw2 = load_vw2_series(24 * 31, "vw2_gold_per_twd")
-    now_vw2 = s_now[-1][1] if s_now else None
-    t_now = dt.datetime.now()
-    latest_txt = (f"最新 <b>{now_vw2:,.0f}</b> @ {t_now:%H:%M}" if now_vw2 else "—")
-    span_h = (all_vw2[-1][0] - all_vw2[0][0]).total_seconds() / 3600 if all_vw2 else 0
 
     def win_npts(hours):
         """窗內實測點數（圖例與『還在累積』判斷用）"""
