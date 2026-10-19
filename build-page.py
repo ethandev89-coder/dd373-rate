@@ -755,7 +755,7 @@ def apply_light_override(d):
 
 
 def main():
-    global PREVIEW, OUT_HTML, WRITE_PAGE_DATA
+    global PREVIEW, OUT_HTML, WRITE_PAGE_DATA, WRITE_VERSION
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-fetch", action="store_true", help="只用快取／歷史，不連 DD373")
     ap.add_argument("--light", action="store_true",
@@ -765,6 +765,9 @@ def main():
     a = ap.parse_args()
     if a.preview:
         PREVIEW, OUT_HTML, WRITE_PAGE_DATA = True, "preview.html", False
+        # 預覽版連 version.json 都不寫：那個檔是「正式頁有新版」的訊號，
+        # 被預覽覆蓋會讓線上使用者誤重載（而且會被 commit 進 repo）。
+        WRITE_VERSION = False
         a.no_fetch = True            # 預覽版對 data/ 唯讀：資料一律沿用正式版產線
     if a.light:
         a.no_fetch = True
