@@ -36,12 +36,18 @@
   function fmtFull(t) { var p = tp(t); return p2(p.M) + '/' + p2(p.D) + ' ' + p2(p.h) + ':' + p2(p.m); }
   function isMidnight(t) { var p = tp(t); return p.h === 0 && p.m === 0; }
   function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
-  var THIN_STOCK = 20000;                   // 掛單量 < 2 億天幣＝薄市場（與 Hero tag 同一門檻；單位萬天幣）
+  var THIN_STOCK = 20000;
+  var STOCK_BREAK = Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000);   // 台北 2026-10-18 11:07：掛單量改抓「全部頁數」
+  var BAR_ZONE = 0.30;                    // 掛單量柱狀區佔繪圖高度的比例（貼在底部）                   // 掛單量 < 2 億天幣＝薄市場（與 Hero tag 同一門檻；單位萬天幣）
   function fmtStock(v) {                    // 掛單量：萬天幣 → 「1.65 億」／「8,300 萬」
     if (v === null || v === undefined) return null;
     return v >= 10000 ? (v / 10000).toFixed(2) + ' 億' : num(v) + ' 萬';
   }
   function isThinStock(v) { return v !== null && v !== undefined && v < THIN_STOCK; }
+  function fmtStockAxis(v) {               // 掛單量右軸刻度：2 億／1.5 億／0
+    if (!(v > 0)) return '0';
+    return v >= 10000 ? (v / 10000).toFixed(v % 10000 === 0 ? 0 : 1) + ' 億' : num(v);
+  }
   /* 漲跌方向（台股慣例）：數字變大＝紅 ▲、數字變小＝綠 ▼；
      四捨五入（digits 位）後為 0 就不加箭頭、用灰色。回傳 { cls, arrow, a }，a 已四捨五入。 */
   function dirOf(v, digits) {
@@ -231,6 +237,27 @@
     }
     var step = plan.step;
 
+    // ---- 掛單量柱：市場總掛單（萬天幣）。只畫實測點；估算段沒有逐筆掛單量可比 ----
+    var stockPts = real.filter(function (p) { return p.s !== null && p.s !== undefined && p.s > 0; });
+    var sTop = 0;
+    stockPts.forEach(function (p) { if (p.s > sTop) sTop = p.s; });
+    // 上限取整到 0.5 億；只在 0 與上限標刻度（中間由 2 億薄市場虛線當參考），避免小圖擠一排字
+    if (sTop > 0) sTop = Math.ceil(sTop / 5000) * 5000;
+    var sTicks = sTop > 0 ? [0, sTop] : [];
+    var barTop = pd.t + ih * (1 - BAR_ZONE), barBase = pd.t + ih;
+    function SY(v) { return barBase - (v / sTop) * (barBase - barTop); }
+    var dts = [];
+    for (var di = 1; di < real.length; di++) dts.push(real[di].t - real[di - 1].t);
+    dts.sort(function (a, b) { return a - b; });
+    var medDt = dts.length ? dts[Math.floor(dts.length / 2)] : 3600;
+    var bw = Math.max(1.2, Math.min(9, iw * medDt / (x1 - x0) * 0.62));
+    // 價格徽章的位置（右軸掛單量刻度要避開它，兩種刻度才不會疊在一起）
+    var latestPt = null;
+    for (var li2 = DATA.real.length - 1; li2 >= 0; li2--) {
+      if (DATA.real[li2].t <= now && DATA.real[li2].t >= x0) { latestPt = DATA.real[li2]; break; }
+    }
+    var badgeY = latestPt ? Y(latestPt.v) : null;
+
     var s = [];
     s.push('<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" ' +
            'font-family="-apple-system,PingFang TC,Microsoft JhengHei,sans-serif" role="img" ' +
@@ -260,6 +287,31 @@
       s.push('<text class="ytick" x="' + (pd.l - 7) + '" y="' + (yy + 4).toFixed(1) +
              '" text-anchor="end">' + num(v) + '</text>');
     });
+
+    // 掛單量柱：貼在圖底；深淺色／線寬都交給 CSS
+    // 10/18 11:07 前只抓第 1 頁（數字被低估約一半）→ 用灰色柱，避免被讀成「賣壓翻倍」
+    if (stockPts.length) {
+      stockPts.forEach(function (p) {
+        var by = SY(p.s);
+        s.push('<rect class="bar' + (p.t < STOCK_BREAK ? ' bar-old' : '') + '" x="' + (X(p.t) - bw / 2).toFixed(1) +
+               '" y="' + by.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, barBase - by).toFixed(1) + '"/>');
+      });
+      if (sTop >= THIN_STOCK) {                                  // 薄市場門檻 2 億（與 Hero tag 同一門檻）
+        var ty = SY(THIN_STOCK);
+        s.push('<line class="thin-stock" x1="' + pd.l + '" y1="' + ty.toFixed(1) +
+               '" x2="' + (pd.l + iw) + '" y2="' + ty.toFixed(1) + '"/>');
+        s.push('<text class="stock-tick" x="' + (pd.l + 3) + '" y="' + (ty - 3).toFixed(1) +
+               '" text-anchor="start">2 億</text>');
+      }
+      s.push('<line class="stock-grid" x1="' + pd.l + '" y1="' + barTop.toFixed(1) +
+             '" x2="' + (pd.l + iw) + '" y2="' + barTop.toFixed(1) + '"/>');   // 柱區頂端＝右軸上限，給刻度一個依據
+      sTicks.forEach(function (v) {                              // 右軸刻度（跟價格徽章重疊的那格不標）
+        var yy = SY(v);
+        if (badgeY !== null && Math.abs(yy - badgeY) < 12) return;
+        s.push('<text class="stock-axis" x="' + (pd.l + iw + 6) + '" y="' + (yy + 3.2).toFixed(1) +
+               '" text-anchor="start">' + fmtStockAxis(v) + '</text>');
+      });
+    }
 
     // 圖上註記：垂直虛線標記（例：開始實測）
     (DATA.notes || []).forEach(function (nt) {
@@ -520,10 +572,24 @@
     return d;
   }
 
+  // 圖例多一行「掛單量」：這裡補（不進 builder），改版驗收通過再併回正式版
+  function addLegend() {
+    var lgd = document.querySelector('.lgd');
+    if (!lgd || lgd.querySelector('.lg-bar')) return;
+    var sp = document.createElement('span');
+    sp.className = 'li';
+    sp.setAttribute('data-tip', '下方橘色柱＝當下市場總掛單量（億天幣）。10/18 11:07 以前只抓第 1 頁、數字被低估，所以畫成灰色；掉到 2 億以下＝薄市場。');
+    sp.innerHTML = '<svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true">' +
+                   '<rect class="lg-bar" x="1" y="4" width="8" height="7" rx="1"/>' +
+                   '<rect class="lg-bar-old" x="11" y="4" width="8" height="7" rx="1"/></svg>掛單量';
+    lgd.appendChild(sp);
+  }
+
   function boot() {
     var el = document.getElementById('chart-data');
     if (!el) return;
     DATA = normalize(JSON.parse(el.textContent));
+    addLegend();
     renderAll();
     if (window.ResizeObserver) {
       var ro = new ResizeObserver(function () {
@@ -564,7 +630,8 @@
                         niceScale: niceScale, niceStep: niceStep, tickLabel: tickLabel,
                         fmtFull: fmtFull, num: num, TZOFF: TZOFF, STEPS: STEPS,
                         dirOf: dirOf, dirPct: dirPct,
-                        fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK };
+                        fmtStock: fmtStock, isThinStock: isThinStock, THIN_STOCK: THIN_STOCK,
+                        fmtStockAxis: fmtStockAxis, STOCK_BREAK: STOCK_BREAK, BAR_ZONE: BAR_ZONE };
 
   var WINCFG = window.DD373WINDOWS || [];
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
