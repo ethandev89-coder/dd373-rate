@@ -684,9 +684,11 @@ def build(d, prev):
                           f'（<span data-ts="{ep(me_ts)}" data-rel="1">{me_age} 分鐘前</span>）'
                           f'　正式版：<a href="./index.html">index.html</a></div>')
         preview_head = '<meta name="robots" content="noindex">'
+        cf_analytics = ""            # 預覽版不計入訪問統計
     else:
         preview_banner = ""
         preview_head = ""
+        cf_analytics = """<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "8e897a96b0f94983babdace9604df841"}'></script><!-- End Cloudflare Web Analytics -->"""
 
     html_doc = f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -723,6 +725,7 @@ def build(d, prev):
   飛馬每 15 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
 {chart_block}
+{cf_analytics}
 </body>
 </html>"""
     os.makedirs(PUBLIC_DIR, exist_ok=True)
