@@ -4,7 +4,10 @@
 
 產線（單一檔案）：
   python3 build-page.py            正式版 → docs/index.html + docs/version.json + data/page-data.json
-  python3 build-page.py --light    不重掃，套用最新 15 分鐘輕掃的飛馬數字（每 15 分鐘的 cron）
+  python3 build-page.py --light    不重掃，套用最新 15 分鐘輕掃的主伺服器數字（每 15 分鐘的 cron）
+
+主伺服器（使用者自己那台）不寫死：一律讀 ~/.hermes/scripts/dd373_main.py（設定檔 main-server.json）。
+移民換服跑 tools/switch-main-server.py。
   python3 build-page.py --preview  預覽版 → docs/preview.html（noindex＋橫幅＋前端測試參數、對 data/ 唯讀）
   DD373_FAKE_AGE_MIN=70 python3 build-page.py --light
                                    測試用：假裝資料是 70 分鐘前 → 驗「已停更」橫幅
@@ -40,7 +43,7 @@ SWEEP_LATEST = os.path.join(DATA_DIR, "sweep-latest.json")
 SWEEP_HISTORY = os.path.join(DATA_DIR, "sweep-history.json")
 STOCK_FULL = os.path.join(DATA_DIR, "stock-full.json")   # 每日全頁掃描的掛單量（22 台可比）
 CACHE_MIN = 45          # 快取新鮮度（分鐘）：build 比 sweep 跑得頻繁時不重抓
-USER_SERVER = "飛馬珀伽索斯"
+# USER_SERVER／USER_SHORT／MAIN_SINCE：主伺服器，從 dd373_main 讀（見下方 import；不要再寫死服名）
 TARGET_WJ = 5000.0      # ② 口徑固定：買滿 5,000 萬天幣
 SORTS = ("1",)          # 只抓「綜合」排序：DD373 頁面本身依單價升序，1 種排序就有最便宜那批
                         # （3 種排序只是多幾個樣本；要全取樣跑 dd373-all-sweep.py）
@@ -84,6 +87,7 @@ from lt_cashrate import fetch_fx         # noqa: E402
 from dd373_series import append_series as _series_append, missing_stock as _series_missing  # noqa: E402
 from dd373_series import note_stock_result, ALERT_SWEEP_2   # noqa: E402  （全服掃描自己的缺值計數）
 from dd373_alert_outbox import push as push_alert           # noqa: E402  （publish cron 不私訊 → 排進出件匣）
+from dd373_main import MAIN_SERVER as USER_SERVER, MAIN_SHORT as USER_SHORT, MAIN_SINCE   # noqa: E402  （主伺服器設定）
 
 # 檔名帶減號，用 importlib 載入 skill 內的 sweep 工具
 import importlib.util                    # noqa: E402
@@ -151,7 +155,7 @@ def fetch_sweep(force=False):
     out, errs = [], []
     for name, tok in tokens.items():
         try:
-            # 飛馬掛單可能超過 20 筆（20 條/頁）→ 抓完所有頁，掛單量才不會少算；
+            # 主伺服器掛單可能超過 20 筆（20 條/頁）→ 抓完所有頁，掛單量才不會少算；
             # 其他 21 台維持 1 頁（見 2026-10-18 使用者實測：飛馬 31 筆只有第 1 頁被讀到）
             paged = (name == USER_SERVER)
             m = server_rate(tok, fx, sorts=SORTS, all_pages=paged)
@@ -264,7 +268,7 @@ def agg_series(points, bucket_sec):
 
 def append_vw2_series(ts_iso, value, stock=None):
 
-    """② 長期序列（只存飛馬一個數字一筆）——獨立檔案，不受 sweep-history / fm-light 的 400 筆上限影響，
+    """② 長期序列（只存主伺服器一個數字一筆）——獨立檔案，不受 sweep-history / fm-light 的 400 筆上限影響，
     7 天／30 天窗才不會因為裁切而缺歷史。
     stock＝當時的市場總掛單量（萬天幣）。寫入一律走 `dd373_series.append_series`（兩條產線共用）：
     `v` 永遠照寫，`s` 缺就存 null 並印警告（不沿用上一筆）。"""
@@ -448,7 +452,7 @@ def build(d, prev):
     except Exception:
         pass
     if fm_light:
-        light_txt += "，已套用到本頁飛馬數字"
+        light_txt += f"，已套用到本頁{USER_SHORT}數字"
     ts = dt.datetime.fromisoformat(d["ts"])
     age_min = int((now - ts).total_seconds() // 60)
     me_ts = dt.datetime.fromisoformat(fm_light["ts"]) if fm_light else ts
@@ -495,9 +499,9 @@ def build(d, prev):
     prev24_pt = next((p for p in reversed(all_vw2) if p[0] <= chg24_cut), None)   # 跟 Hero 用同一筆
     ref24_by_name = values_at_24h_ago(chg24_cut)
     if prev24_pt:
-        ref24_by_name[USER_SERVER] = prev24_pt[1]      # 飛馬：用 Hero 那條合併序列，兩邊百分比才會一模一樣
+        ref24_by_name[USER_SERVER] = prev24_pt[1]      # 主伺服器：用 Hero 那條合併序列，兩邊百分比才會一模一樣
 
-    # ---------- 全服排行列（飛馬置頂、其餘依 ② 由大到小；第 2 行放細節） ----------
+    # ---------- 全服排行列（主伺服器置頂、其餘依 ② 由大到小；第 2 行放細節） ----------
     rank_of = {srv["server"]: i for i, srv in enumerate(by_vw, 1)}
     n_servers = len(by_vw)
     me = next((x for x in by_vw if x["server"] == USER_SERVER), None)
@@ -506,7 +510,7 @@ def build(d, prev):
     rank_rows = []
     for srv in order:
         is_me = (srv is me)
-        # 飛馬：現值用 Hero 那顆（合併序列最新點）、基期用同一條序列的 24 小時前值 → 兩處百分比一模一樣
+        # 主伺服器：現值用 Hero 那顆（合併序列最新點）、基期用同一條序列的 24 小時前值 → 兩處百分比一模一樣
         pct = delta_pct(now_vw2 if is_me else srv["vw2_gold_per_twd"], ref24_by_name.get(srv["server"]))
         srv_cls, dl_txt = arrow_of(pct)
         rank_rows.append(
@@ -516,7 +520,7 @@ def build(d, prev):
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
             f'<span class="dl {srv_cls}">{dl_txt}</span></div>'
             f'<div class="rline2">最低一筆 {srv["low_gold_per_twd"]:,.0f}'
-            f' ・ <span data-tip="全部掛單的庫存總和。飛馬即時（每 15 分鐘）、其他服每日一次全頁掃描">'
+            f' ・ <span data-tip="全部掛單的庫存總和。{html.escape(USER_SHORT)}即時（每 15 分鐘）、其他服每日一次全頁掃描">'
             f'掛單 {(srv["stock_wj"] if is_me else full_stock.get(srv["server"], srv["stock_wj"])) / 10000:.2f} 億天幣</span>'
             f'</div></div>')
 
@@ -578,6 +582,9 @@ def build(d, prev):
         # 降採樣：[段起點, 中位數(畫線用), 原始中位數, 是否離群, min, max, 筆數, 掛單量中位數]
         "agg": chart_agg,
         "notes": chart_notes,
+        # 換成這台主伺服器的時間（epoch）：之前只有每小時一點、掛單量只抓第 1 頁
+        # → 前端在這之前用較寬的斷線門檻、不畫掛單量（見 trend.js segments／stockBreak）
+        "mainSince": ep(dt.datetime.fromisoformat(MAIN_SINCE).replace(tzinfo=None)) if MAIN_SINCE else None,
     }
     chart_windows = [
         # gapReal／gapEst：相鄰兩筆超過此秒數就斷線（實測 30 分；估算抽樣稀疏 → 用 12 小時）
@@ -671,7 +678,7 @@ def build(d, prev):
         ranking_block = f"""
 <section class="card">
   <details class="dsc">
-    <summary><span>全服排行</span><span class="dsub">飛馬第 {rank}／{n_servers} 名</span></summary>
+    <summary><span>全服排行</span><span class="dsub">{html.escape(USER_SHORT)}第 {rank}／{n_servers} 名</span></summary>
     <div class="dbody glist">{''.join(rank_rows)}</div>
   </details>
 </section>"""
@@ -696,7 +703,7 @@ def build(d, prev):
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {preview_head}
-<title>飛馬珀伽索斯 天幣幣值（DD373）</title>
+<title>{html.escape(USER_SERVER)} 天幣幣值（DD373）</title>
 <style>
 {apple_css}
 .notice {{
@@ -714,7 +721,7 @@ def build(d, prev):
 {bo_block}
 <div class="notice bad" id="stale-banner" hidden></div>
 <header class="page-head">
-  <h1>飛馬珀伽索斯</h1>
+  <h1>{html.escape(USER_SERVER)}</h1>
   <p class="sub" data-tip="從最便宜的掛單一路往上買，湊滿 5,000 萬天幣的平均價；數字越大＝天幣越便宜">DD373 · 買滿 5,000 萬天幣加權</p>
 </header>
 {hero_block}
@@ -722,7 +729,7 @@ def build(d, prev):
 {ranking_block}
 <footer>
   產生時間 {now:%Y/%m/%d %H:%M:%S} ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD {fx:.4f}<br>
-  飛馬每 15 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+  {html.escape(USER_SHORT)}每 15 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
 {chart_block}
 {cf_analytics}
@@ -745,7 +752,7 @@ def build(d, prev):
 
 
 def apply_light_override(d):
-    """把 15 分鐘輕掃的最新飛馬數字套進頁面資料（口徑與整頁掃描相同：同 1 種排序、同一個 ② 算法）。
+    """把 15 分鐘輕掃的最新主伺服器數字套進頁面資料（口徑與整頁掃描相同：同 1 種排序、同一個 ② 算法）。
     回傳輕掃資訊 dict 或 None。"""
     try:
         e = json.load(open(os.path.join(DATA_DIR, "fm-light.json"), encoding="utf-8"))["entries"][-1]
@@ -767,7 +774,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-fetch", action="store_true", help="只用快取／歷史，不連 DD373")
     ap.add_argument("--light", action="store_true",
-                    help="每 15 分鐘的輕量發佈：不重掃全服，只把最新輕掃的飛馬數字套進頁面")
+                    help="每 15 分鐘的輕量發佈：不重掃全服，只把最新輕掃的主伺服器數字套進頁面")
     ap.add_argument("--preview", action="store_true",
                     help="產 docs/preview.html（預覽版：加 noindex＋橫幅、帶前端測試參數、不寫 page-data.json、不掃描）")
     a = ap.parse_args()

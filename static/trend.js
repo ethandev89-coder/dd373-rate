@@ -1,5 +1,5 @@
 /* ============================================================================
-   飛馬走勢圖 — 手刻 SVG 渲染器（A 版：含 P0 遺留三修正）
+   主伺服器走勢圖 — 手刻 SVG 渲染器（A 版：含 P0 遺留三修正）
    原則：
      1) X 軸＝真實時間線性比例（絕不用資料點索引）
      2) X 刻度級距從 [1h,3h,6h,12h,1d,2d,7d,14d] 挑「刻度數 5~8」的最小級距，
@@ -38,6 +38,9 @@
   function num(v) { return Math.round(v).toLocaleString('en-US'); }   // 整數＋千分位
   var THIN_STOCK = 20000;
   var STOCK_BREAK = Math.floor(Date.UTC(2026, 9, 18, 3, 7) / 1000);   // 台北 2026-10-18 11:07：掛單量改抓「全部頁數」（之前的舊值不畫）
+  var HOURLY_GAP = 5400;   // 換主伺服器（DATA.mainSince）以前那段只有每小時一點 → 用 90 分鐘當斷線門檻
+  // 掛單量口徑分界：10/18 11:07 與「換成這台主伺服器」取較晚者（換服前那台每小時只抓第 1 頁，偏低約一半）
+  function stockBreak() { return Math.max(STOCK_BREAK, (DATA && DATA.mainSince) || 0); }
   var STOCK_BUCKETS = [900, 1800, 3600, 7200, 10800, 14400, 21600, 43200, 86400];   // 15分／30分／1時／2時／3時／4時／6時／12時／1天
   function fmtStock(v) {                    // 掛單量：萬天幣 → 「1.65 億」／「8,300 萬」
     if (v === null || v === undefined) return null;
@@ -177,9 +180,15 @@
 
   /* ---------- 資料輔助 ---------- */
   function segments(pts, gap) {                            // 相鄰兩筆間隔 > gap 就斷線
-    var segs = [], cur = [], i;
+    var segs = [], cur = [], i, g, prevT;
+    var hourlyUntil = (DATA && DATA.mainSince) || 0;
     for (i = 0; i < pts.length; i++) {
-      if (cur.length && pts[i].t - cur[cur.length - 1].t > gap) { segs.push(cur); cur = []; }
+      if (cur.length) {
+        prevT = cur[cur.length - 1].t;
+        // 換主伺服器以前只有每小時一點：照 30 分門檻會每點都斷成孤點、整段畫不出來
+        g = prevT < hourlyUntil ? Math.max(gap, HOURLY_GAP) : gap;
+        if (pts[i].t - prevT > g) { segs.push(cur); cur = []; }
+      }
       cur.push(pts[i]);
     }
     if (cur.length) segs.push(cur);
@@ -263,11 +272,11 @@
     var axisY = barBase + 14;                         // 時間刻度移到柱區下方
     var H = axisY + 4;
 
-    // 先分桶再畫：每桶＝該時段所有點的中位數；只收 10/18 11:07 之後的全頁數字
-    var buckets = {};
+    // 先分桶再畫：每桶＝該時段所有點的中位數；只收口徑分界（stockBreak）之後的全頁數字
+    var buckets = {}, SB = stockBreak();
     for (var ri = 0; ri < DATA.real.length; ri++) {
       var rp = DATA.real[ri];
-      if (rp.t < x0 || rp.t > now || rp.t < STOCK_BREAK) continue;
+      if (rp.t < x0 || rp.t > now || rp.t < SB) continue;
       if (rp.s === null || rp.s === undefined || !(rp.s > 0)) continue;
       var bk = Math.floor((rp.t + TZOFF) / sbucket) * sbucket - TZOFF;
       (buckets[bk] = buckets[bk] || []).push(rp.s);
@@ -325,7 +334,7 @@
     }
     if (slots.length && slots[0].t > x0 + sbucket) {           // 時窗比資料長 → 標出資料起點
       s.push('<text class="stock-since" x="' + (X(slots[0].t) - slotPx / 2 - 4).toFixed(1) +
-             '" y="' + (barBase - 2).toFixed(1) + '" text-anchor="end">10/18 起</text>');
+             '" y="' + (barBase - 2).toFixed(1) + '" text-anchor="end">' + fmtDate(Math.max(slots[0].t, SB)) + ' 起</text>');
     }
 
     // 圖上註記：垂直虛線標記（例：開始實測）
@@ -475,11 +484,11 @@
       ? fmtDate(t0) + ' ' + fmtHM(t0) + '–' + fmtHM(t1)
       : fmtFull(t0) + '–' + fmtFull(t1);
   }
-  // 掛單量那一行：STOCK_BREAK（台北 10/18 11:07）之前的掛單量只抓第 1 頁、偏低約一半，
-  // 所以整行不顯示（連「薄市場」一起）——與下方掛單量面板「不畫舊值」一致。
+  // 掛單量那一行：口徑分界 stockBreak()（台北 10/18 11:07，或換主伺服器的時間，取較晚者）之前
+  // 的掛單量只抓第 1 頁、偏低約一半，所以整行不顯示（連「薄市場」一起）——與下方掛單量面板「不畫舊值」一致。
   // 合併點（7 天 1 小時／30 天 4 小時）用時段起點 p.t 判斷。
   function ttStockHtml(p) {
-    if (!p || !(p.t >= STOCK_BREAK)) return '';
+    if (!p || !(p.t >= stockBreak())) return '';
     var stxt = fmtStock(p.s);
     if (!stxt) return '';
     return '<div class="stk">掛單 ' + stxt +

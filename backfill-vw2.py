@@ -8,7 +8,7 @@
   再把 9/15 起的實買序列乘上 r，就得到「大約的 ②」。＝估算值，不是實測值 → 頁面會標明。
 
 輸出：
-  data/vw2-estimated.json      飛馬單服（走勢卡用）
+  data/vw2-estimated.json      主伺服器單服（走勢卡用；服名見 ~/.hermes/scripts/dd373_main.py）
   data/vw2-estimated-all.json  22 台（全服比較卡用）：
       {"updated","global_r","r":{服:比率},"series":{服:[{"ts","v"}...]}}
 
@@ -19,14 +19,17 @@ import datetime as dt
 import json
 import os
 import statistics as st
+import sys
 
 HOME = os.path.expanduser("~")
+sys.path.insert(0, os.path.join(HOME, ".hermes", "scripts"))
+from dd373_main import MAIN_SERVER   # noqa: E402  （主伺服器設定）
 DATA = os.path.join(HOME, ".hermes", "dd373-page", "data")
 SWEEP_HISTORY = os.path.join(DATA, "sweep-history.json")
 CRON_HISTORY = os.path.join(HOME, ".hermes", "data", "dd373-multiserver-history.json")
 OUT_ONE = os.path.join(DATA, "vw2-estimated.json")
 OUT_ALL = os.path.join(DATA, "vw2-estimated-all.json")
-USER_SERVER = "飛馬珀伽索斯"
+USER_SERVER = MAIN_SERVER
 
 
 def ratios():

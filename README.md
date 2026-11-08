@@ -8,11 +8,24 @@
 - 頁面：`docs/index.html`（唯一發佈檔，GitHub Pages 來源＝main /docs）
 
 
+## 主伺服器（使用者自己那台）
+
+- **2026-11-08 起＝天神宙斯**（2026-09-28～11-08 是飛馬珀伽索斯；飛馬的輕掃／② 序列／估算檔在 `data/archive/飛馬珀伽索斯-20261108/`）。
+- 服名不寫死：設定檔 `main-server.json`，所有產線透過 `~/.hermes/scripts/dd373_main.py` 讀（`MAIN_SERVER`／`MAIN_SHORT`／`MAIN_TOKEN`／`MAIN_SINCE`）。
+- **移民換服**：在兩次 cron 之間（避開 :07/:22/:37/:52 與 :20~:28）跑
+  `python3 tools/switch-main-server.py <新服全名> <短名>`（先加 `--dry-run` 看計畫），再跑 tests、commit。
+  它會把舊服的 `fm-light.json`／`vw2-series.json`／`vw2-estimated.json` 搬進 `data/archive/`，
+  用 git 裡每一版 `data/page-data.json` 重建新服的每小時 ② 歷史（掛單量留空：換服前那台只抓第 1 頁），
+  重跑估算、改 cron 名稱。
+- 走勢圖：`mainSince`（換服時間）以前那段只有每小時一點 → 斷線門檻放寬到 90 分；掛單量從換服那刻起才畫。
+- `fm-light.json` 沿用舊檔名（fm＝當初的飛馬），內容一律是「現在的主伺服器」。
+
+
 ## ② 口徑與「估算段」
 
 - 頁面主數字＝**② 買滿 5,000 萬金加權幣值**（1 台幣≈N 金）。
 - ② 的實測只從 2026-10-14 19:01 起（我們自己的每小時掃描＋15 分輕掃才同時存 ② 與實買）。
-- 更早的歷史用 `backfill-vw2.py` 換算：**r = ② ÷ 實買**（逐服取中位，用同時段實測配對算），舊的實買序列 × r → `data/vw2-estimated-all.json`（22 台）與 `vw2-estimated.json`（飛馬）。
+- 更早的歷史用 `backfill-vw2.py` 換算：**r = ② ÷ 實買**（逐服取中位，用同時段實測配對算），舊的實買序列 × r → `data/vw2-estimated-all.json`（22 台）與 `vw2-estimated.json`（主伺服器）。
 - 頁面上 **實線＝實測 ②、灰虛線＝估算 ②**，legend 標明比率與「非實測」。每次整頁發佈都會刷新估算段。
 - ② 長期序列獨立存 `data/vw2-series.json`（上限 9,000 筆≈93 天），避免 30 天窗因 400 筆裁切而缺歷史。
 
@@ -20,7 +33,7 @@
 
 | 檔案 | 用途 |
 |---|---|
-| `build-page.py` | 抓 DD373（22 台 × 1 排序）→ 算 ①/②/變現 → render `docs/index.html`；`--light` 則只把最新輕掃的飛馬數字套進頁面 |
+| `build-page.py` | 抓 DD373（22 台 × 1 排序）→ 算 ①/②/變現 → render `docs/index.html`；`--light` 則只把最新輕掃的主伺服器數字套進頁面 |
 | `backfill-vw2.py` | 舊實買歷史 → 估算 ②（逐服比率換算） |
 | `publish.sh` | build（full 時先跑 backfill）→ commit → push；`--light`＝15 分鐘輕量發佈、`--no-jitter`＝除錯 |
 

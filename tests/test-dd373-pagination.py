@@ -168,7 +168,7 @@ class StockTest(unittest.TestCase):
 
 
 class SourceGuardTest(unittest.TestCase):
-    """三支產線都要記得「飛馬全頁 / sort=5」，不然下次改版又會漏。"""
+    """三支產線都要記得「主伺服器全頁 / sort=5」，不然下次改版又會漏。（主伺服器＝dd373_main.py，不寫死服名）"""
 
     def read(self, *p):
         return open(os.path.join(os.path.expanduser("~"), *p), encoding="utf-8").read()
@@ -177,14 +177,27 @@ class SourceGuardTest(unittest.TestCase):
         s = self.read(".hermes", "scripts", "dd373-fm-light.py")
         self.assertIn('sorts=("5",), all_pages=True', s)
 
-    def test_整頁掃描飛馬抓全頁(self):
+    def test_整頁掃描主伺服器抓全頁(self):
         s = self.read(".hermes", "dd373-page", "build-page.py")
         self.assertIn("paged = (name == USER_SERVER)", s)
         self.assertIn("all_pages=paged", s)
+        self.assertIn("from dd373_main import MAIN_SERVER as USER_SERVER", s)
 
-    def test_全服歷史飛馬抓全頁(self):
+    def test_全服歷史主伺服器抓全頁(self):
         s = self.read(".hermes", "scripts", "dd373-scan-all.py")
-        self.assertIn('all_pages=(name == "飛馬珀伽索斯")', s)
+        self.assertIn("all_pages=(name == MAIN_SERVER)", s)
+
+    def test_服名不寫死(self):
+        """移民換服只改 main-server.json：產線程式裡不准再出現寫死的服名字串。
+        （dd373-scan-all.py 不在清單：它的 TOKENS 表本來就列了 22 台；它抓全頁那行由上一個測試守）"""
+        files = [(".hermes", "dd373-page", "build-page.py"), (".hermes", "dd373-page", "backfill-vw2.py"),
+                 (".hermes", "scripts", "dd373-fm-light.py"),
+                 (".hermes", "scripts", "dealer-quote.py"), (".hermes", "scripts", "dd373-page-alert.py"),
+                 (".hermes", "scripts", "dd373_series.py")]
+        for p in files:
+            s = self.read(*p)
+            for lit in ('"飛馬珀伽索斯"', '"天神宙斯"', '"prr508"', '"s9gju1"'):
+                self.assertNotIn(lit, s, f"{p[-1]} 寫死了 {lit}")
 
 
 if __name__ == "__main__":
