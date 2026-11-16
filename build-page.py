@@ -729,7 +729,7 @@ def build(d, prev):
 {ranking_block}
 <footer>
   產生時間 {now:%Y/%m/%d %H:%M:%S} ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD {fx:.4f}<br>
-  {html.escape(USER_SHORT)}每 30 分鐘、全服幣值每 3 小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+  {html.escape(USER_SHORT)}每 30 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
 {chart_block}
 {cf_analytics}
