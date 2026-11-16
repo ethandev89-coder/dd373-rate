@@ -4,13 +4,13 @@
 
 產線（單一檔案）：
   python3 build-page.py            正式版 → docs/index.html + docs/version.json + data/page-data.json
-  python3 build-page.py --light    不重掃，套用最新 15 分鐘輕掃的主伺服器數字（每 15 分鐘的 cron）
+  python3 build-page.py --light    不重掃，套用最新輕掃的主伺服器數字（每 30 分鐘的 cron）
 
 主伺服器（使用者自己那台）不寫死：一律讀 ~/.hermes/scripts/dd373_main.py（設定檔 main-server.json）。
 移民換服跑 tools/switch-main-server.py。
   python3 build-page.py --preview  預覽版 → docs/preview.html（noindex＋橫幅＋前端測試參數、對 data/ 唯讀）
-  DD373_FAKE_AGE_MIN=70 python3 build-page.py --light
-                                   測試用：假裝資料是 70 分鐘前 → 驗「已停更」橫幅
+  DD373_FAKE_AGE_MIN=100 python3 build-page.py --light
+                                   測試用：假裝資料是 100 分鐘前 → 驗「已停更」橫幅
 
 流程：
   1) 抓取：22 台 x 1 排序（走 dd373-rate-query skill 的 lt_rate_v2.server_rate）→ ①/②/成本/變現
@@ -459,9 +459,9 @@ def build(d, prev):
     if FAKE_AGE_MIN:                 # 測試用：假裝資料是 N 分鐘前（驗「已停更」橫幅）
         me_ts = me_ts - dt.timedelta(minutes=FAKE_AGE_MIN)
     me_age = int((now - me_ts).total_seconds() // 60)
-    if me_age <= 30:                     # D 階段會改成每 60 秒由 JS 重算
+    if me_age <= 45:                     # D 階段會改成每 60 秒由 JS 重算
         fresh_cls, fresh_txt = "", f"{me_age} 分鐘前"
-    elif me_age <= 60:
+    elif me_age <= 90:
         fresh_cls, fresh_txt = " warn", "資料延遲"
     else:
         fresh_cls, fresh_txt = " bad", f"資料停更 {me_age} 分鐘"
@@ -520,7 +520,7 @@ def build(d, prev):
             f'<span class="vw">{srv["vw2_gold_per_twd"]:,.0f}</span>'
             f'<span class="dl {srv_cls}">{dl_txt}</span></div>'
             f'<div class="rline2">最低一筆 {srv["low_gold_per_twd"]:,.0f}'
-            f' ・ <span data-tip="全部掛單的庫存總和。{html.escape(USER_SHORT)}即時（每 15 分鐘）、其他服每日一次全頁掃描">'
+            f' ・ <span data-tip="全部掛單的庫存總和。{html.escape(USER_SHORT)}即時（每 30 分鐘）、其他服每日一次全頁掃描">'
             f'掛單 {(srv["stock_wj"] if is_me else full_stock.get(srv["server"], srv["stock_wj"])) / 10000:.2f} 億天幣</span>'
             f'</div></div>')
 
@@ -587,13 +587,13 @@ def build(d, prev):
         "mainSince": ep(dt.datetime.fromisoformat(MAIN_SINCE).replace(tzinfo=None)) if MAIN_SINCE else None,
     }
     chart_windows = [
-        # gapReal／gapEst：相鄰兩筆超過此秒數就斷線（實測 30 分；估算抽樣稀疏 → 用 12 小時）
+        # gapReal／gapEst：相鄰兩筆超過此秒數就斷線（實測 60 分＝輕掃 30 分一次、漏一筆仍相連；2026-11-16 降頻前是 30 分；估算抽樣稀疏 → 用 12 小時）
         # agg：這個窗要用哪一組降採樣序列（沒有就畫原始點）
-        {"id": "24h", "label": "24 小時", "span": 86400, "gapReal": 1800, "gapEst": 43200},
-        {"id": "48h", "label": "48 小時", "span": 172800, "gapReal": 1800, "gapEst": 43200},
-        {"id": "7d", "label": "7 天", "span": 604800, "gapReal": 1800, "gapEst": 43200,
+        {"id": "24h", "label": "24 小時", "span": 86400, "gapReal": 3600, "gapEst": 43200},
+        {"id": "48h", "label": "48 小時", "span": 172800, "gapReal": 3600, "gapEst": 43200},
+        {"id": "7d", "label": "7 天", "span": 604800, "gapReal": 3600, "gapEst": 43200,
          "agg": "7d", "gapAgg": 3 * 3600},
-        {"id": "30d", "label": "30 天", "span": 2592000, "gapReal": 1800, "gapEst": 43200,
+        {"id": "30d", "label": "30 天", "span": 2592000, "gapReal": 3600, "gapEst": 43200,
          "agg": "30d", "gapAgg": 3 * 4 * 3600},
     ]
 
@@ -729,7 +729,7 @@ def build(d, prev):
 {ranking_block}
 <footer>
   產生時間 {now:%Y/%m/%d %H:%M:%S} ｜ 資料來源：DD373 天幣掛單（天堂經典版台服）｜ 匯率 CNY→TWD {fx:.4f}<br>
-  {html.escape(USER_SHORT)}每 15 分鐘、全服幣值每小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
+  {html.escape(USER_SHORT)}每 30 分鐘、全服幣值每 3 小時更新；全服掛單量每日一次（全頁掃描）。平台掛單價格隨時變動，本頁為取樣時點的快照；短時間內個別服可跳 ±10%，單一快照別當趨勢。
 </footer>
 {chart_block}
 {cf_analytics}
@@ -774,7 +774,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-fetch", action="store_true", help="只用快取／歷史，不連 DD373")
     ap.add_argument("--light", action="store_true",
-                    help="每 15 分鐘的輕量發佈：不重掃全服，只把最新輕掃的主伺服器數字套進頁面")
+                    help="每 30 分鐘的輕量發佈：不重掃全服，只把最新輕掃的主伺服器數字套進頁面")
     ap.add_argument("--preview", action="store_true",
                     help="產 docs/preview.html（預覽版：加 noindex＋橫幅、帶前端測試參數、不寫 page-data.json、不掃描）")
     a = ap.parse_args()

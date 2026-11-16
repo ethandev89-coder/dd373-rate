@@ -67,10 +67,10 @@ eq('relText(90)', P.relText(90), '1 小時 30 分鐘前');
 eq('durText(7)＝7 分鐘', P.durText(7), '7 分鐘');
 eq('durText(67)＝1 小時 7 分鐘', P.durText(67), '1 小時 7 分鐘');
 eq('durText(120)＝2 小時', P.durText(120), '2 小時');
-eq('30 分＝新鮮（no class）', P.freshState(30), { cls: '', txt: '30 分鐘前' });
-eq('31 分＝資料延遲（warn）', P.freshState(31), { cls: 'warn', txt: '資料延遲' });
-eq('60 分＝資料延遲（warn）', P.freshState(60), { cls: 'warn', txt: '資料延遲' });
-eq('61 分＝資料停更（bad）', P.freshState(61), { cls: 'bad', txt: '已停更 1 小時 1 分鐘' });
+eq('45 分＝新鮮（no class）', P.freshState(45), { cls: '', txt: '45 分鐘前' });
+eq('46 分＝資料延遲（warn）', P.freshState(46), { cls: 'warn', txt: '資料延遲' });
+eq('90 分＝資料延遲（warn）', P.freshState(90), { cls: 'warn', txt: '資料延遲' });
+eq('91 分＝資料停更（bad）', P.freshState(91), { cls: 'bad', txt: '已停更 1 小時 31 分鐘' });
 
 log.push('');
 log.push('== DOM：膠囊與停更橫幅（?now=2026-10-17T04:00，資料 01:00 → 180 分前）==');

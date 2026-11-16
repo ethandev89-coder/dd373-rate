@@ -1,7 +1,7 @@
 /* ============================================================================
    天幣幣值頁 — 行為層（D 階段）
      1) 時間會動：所有 [data-ts] 每 60 秒重算「N 分鐘前」；膠囊依新鮮度轉 --warn／--bad，
-        超過 60 分鐘另外在頁首顯示「資料已停更」橫幅
+        超過 90 分鐘另外在頁首顯示「資料已停更」橫幅
      2) 分頁可見時每 5 分鐘檢查 version.json：有新資料才整頁重新載入
         三個保護：① built 真的變新 ② 最近 60 秒有操作就不打斷 ③ tooltip 開著就不打斷
      3) 記住上次選的時間窗（localStorage）；details 展開狀態與捲動位置（sessionStorage）
@@ -53,8 +53,8 @@
     return h + ' 小時' + (m ? ' ' + m + ' 分鐘' : '');
   }
   function freshState(min) {                                       // 資料新鮮度：ok／warn／bad
-    if (min <= 30) return { cls: '', txt: relText(min) };
-    if (min <= 60) return { cls: 'warn', txt: '資料延遲' };
+    if (min <= 45) return { cls: '', txt: relText(min) };       // 2026-11-16 降頻：輕掃 30 分一次（門檻同 build-page.py）
+    if (min <= 90) return { cls: 'warn', txt: '資料延遲' };
     return { cls: 'bad', txt: '已停更 ' + durText(min) };
   }
 
